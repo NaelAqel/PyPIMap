@@ -40,7 +40,7 @@ def main(cwd, DB_URL, change_definition=False):
                 cursor.execute(query)
             pg_conn.commit()
 
-            print("Done inserting, finalizing postgres now ... ", end="")
+            print("Done inserting, finalizing postgres now ... ")
 
             # finalizing
             with open(f"{cwd}/pipeline/sql/final_step.sql", "r") as f:

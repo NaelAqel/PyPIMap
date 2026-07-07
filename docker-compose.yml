@@ -52,6 +52,8 @@ services:
     depends_on:
       postgres_db:
         condition: service_healthy  # Ensures postgres is fully running first
+    networks:
+      - app_network
     command: ['python', '-u', 'pipeline/etl.py', '--seed-only']
 
   # 3. The FastAPI Backend Layer

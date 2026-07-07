@@ -1,0 +1,3 @@
+[build]
+  command = "npm run build && echo -e \"/package/:name ${BACKEND_API_URL}/package/:name 200\n/sitemap.xml ${BACKEND_API_URL}/sitemap.xml 200\n/robots.txt ${BACKEND_API_URL}/robots.txt 200\n/* /index.html 200\" > dist/_redirects"
+  publish = "dist"

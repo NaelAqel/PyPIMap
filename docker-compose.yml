@@ -1,0 +1,137 @@
+version: '3.8'
+
+services:
+  # 1. The PostgreSQL Database Layer
+  postgres_db:
+    image: postgres:15-alpine
+    container_name: prod_postgres
+    restart: always
+    environment:
+      # Master credentials used ONLY for container initialization
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin_password_123}
+      POSTGRES_DB: ${POSTGRES_DB:-pg_db}
+      POSTGRES_USER_WRITE: ${POSTGRES_USER_WRITE:-user_write}
+      POSTGRES_PASSWORD_WRITE: ${POSTGRES_PASSWORD_WRITE:-user_write_password}
+      POSTGRES_USER_READ: ${POSTGRES_USER_READ:-user_read}
+      POSTGRES_PASSWORD_READ: ${POSTGRES_PASSWORD_READ:-user_read_password}
+      POSTGRES_SSLMODE: ${POSTGRES_SSLMODE:-prefer}
+    ports:
+      - target: 5432
+        published: "${DB_PORT:-5432}"
+        protocol: tcp
+    volumes:
+      # Named volume ensures data isn't lost when containers stop/restart
+      - pg_data:/var/lib/postgresql/data
+      # Mounts your custom initialization SQL script (creates schemas, pg_read, and pg_write users)
+      - ./pipeline/init/:/docker-entrypoint-initdb.d:z
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-pg_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # 2. filling data inside postgres when run for first time
+  # It will use the version available in `pipeline/base.parquet`
+  db_seeder:
+    build:
+      context: .
+      dockerfile: pipeline/Dockerfile
+    container_name: db_seeder
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres_db}
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-pg_db}
+      POSTGRES_USER: ${POSTGRES_USER_WRITE:-user_write}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD_WRITE:-user_write_password}
+      POSTGRES_SSLMODE: ${POSTGRES_SSLMODE:-prefer}
+    volumes:
+      - .:/app:z
+    depends_on:
+      postgres_db:
+        condition: service_healthy  # Ensures postgres is fully running first
+    command: ['python', '-u', 'pipeline/etl.py', '--seed-only']
+
+  # 3. The FastAPI Backend Layer
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fastapi_backend
+    restart: always
+    environment:
+      # Reads from .env file; falls back to safe read-only defaults for local dev
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres_db}
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-pg_db}
+      POSTGRES_USER: ${POSTGRES_USER_READ:-user_read}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD_READ:-user_read_password}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
+    ports:
+      - target: 8000
+        published: "${API_PORT:-8000}"
+        protocol: tcp
+    volumes:
+    - ./backend:/app:z
+    depends_on:
+      - db_seeder
+    networks:
+      - app_network
+
+  # 4. The React + Vite Frontend Layer
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: react_frontend
+    restart: always
+    environment:
+      # Vite requires variables intended for the client side to be prefixed with VITE_
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app:z
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - app_network
+
+  # 5. The Daily ETL Pipeline Layer (Cron)
+  pipeline:
+    build:
+      context: .
+      dockerfile: pipeline/Dockerfile
+    container_name: etl_pipeline
+    # "no" prevents it from constantly restarting in a loop since it's a batch job
+    restart: "no"
+    environment:
+      # Reads from .env file; falls back to write-privilege defaults for local dev
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres_db}
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-pg_db}
+      POSTGRES_USER: ${POSTGRES_USER_WRITE:-user_write}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD_WRITE:-user_write_password}
+      POSTGRES_SSLMODE: ${POSTGRES_SSLMODE:-prefer}
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS}
+    volumes:
+      - .:/app:z
+      - ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}:z
+    depends_on:
+      - postgres_db
+    networks:
+      - app_network
+    profiles:
+      # Using a profile keeps this service hidden during standard 'docker compose up' 
+      # You or your production cron job run it manually using: docker compose run pipeline
+      - cron
+
+volumes:
+  pg_data: # Declares the managed volume for database persistence
+
+networks:
+  app_network:
+    driver: bridge # Isolates network traffic strictly between these 4 containers

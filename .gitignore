@@ -1,0 +1,27 @@
+# Security & Secrets
+.env
+*.json
+!example.json
+!package.json 
+!package-lock.json 
+production_secrets/
+
+# Python caching
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# Node / React building
+node_modules/
+dist/
+.eslintcache
+
+# Local data cache (DuckDB / Parquet)
+*.duckdb
+*.db
+
+# Logs
+*.log

@@ -77,6 +77,7 @@ services:
         protocol: tcp
     volumes:
     - ./backend:/app:z
+    - frontend_dist:/app/frontend_dist:ro
     depends_on:
       - db_seeder
     networks:
@@ -87,16 +88,14 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
     container_name: react_frontend
     restart: always
-    environment:
-      # Vite requires variables intended for the client side to be prefixed with VITE_
-      - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
     ports:
       - "3000:3000"
     volumes:
-      - ./frontend:/app:z
-      - /app/node_modules
+      - frontend_dist:/app/dist
     depends_on:
       - backend
     networks:
@@ -148,6 +147,7 @@ services:
 
 volumes:
   pg_data: # Declares the managed volume for database persistence
+  frontend_dist:
 
 networks:
   app_network:

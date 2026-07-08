@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Query, status, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse, HTMLResponse, FileResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -14,6 +15,7 @@ SITEMAP_CHUNK_SIZE = 45000
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.mount("/assets", StaticFiles(directory="/app/frontend_dist/assets"), name="assets")
 
 CACHEABLE_PATH_PREFIXES = (
     "/package/",
@@ -122,7 +124,16 @@ def get_package_info(name: str):
 
             if row is None:
                 raise HTTPException(status_code=404, detail="Package not found")
-    return HTMLResponse(content=row[1], status_code=200)
+    seo_header = row[1]
+
+    with open('/app/frontend_dist/index.html') as f:
+        frontend_html = f.read()
+
+    # Insert SEO tags right after the opening <head> tag of the real built file
+    head_tag_end = frontend_html.index('<head>') + len('<head>')
+    full_html = frontend_html[:head_tag_end] + seo_header + frontend_html[head_tag_end:]
+
+    return HTMLResponse(content=full_html, status_code=200)
 
 
 @app.get("/package/api/{name}")
@@ -678,3 +689,38 @@ def get_sitemap_chunk(chunk_num: int):
         f"</urlset>"
     )
     return Response(content=sitemap_xml, media_type="application/xml")
+
+
+@app.get("/site.webmanifest")
+def get_manifest():
+    return FileResponse("/app/frontend_dist/site.webmanifest")
+
+
+@app.get("/favicon.ico")
+def get_favicon():
+    return FileResponse("/app/frontend_dist/favicon.ico")
+
+
+@app.get("/favicon-32x32.png")
+def get_favicon_32():
+    return FileResponse("/app/frontend_dist/favicon-32x32.png")
+
+
+@app.get("/favicon-16x16.png")
+def get_favicon_16():
+    return FileResponse("/app/frontend_dist/favicon-16x16.png")
+
+
+@app.get("/apple-touch-icon.png")
+def get_apple_icon():
+    return FileResponse("/app/frontend_dist/apple-touch-icon.png")
+
+
+@app.get("/android-chrome-192x192.png")
+def get_android_192():
+    return FileResponse("/app/frontend_dist/android-chrome-192x192.png")
+
+
+@app.get("/android-chrome-512x512.png")
+def get_android_512():
+    return FileResponse("/app/frontend_dist/android-chrome-512x512.png")

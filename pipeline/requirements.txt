@@ -1,0 +1,5 @@
+psycopg[binary]
+httpx
+pyarrow
+google-cloud-bigquery
+duckdb

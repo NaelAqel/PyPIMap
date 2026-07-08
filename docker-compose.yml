@@ -102,7 +102,22 @@ services:
     networks:
       - app_network
 
-  # 5. The Daily ETL Pipeline Layer (Cron)
+  # 5. Nginx Reverse Proxy — routes pypimap.com/api.pypimap.com traffic to frontend/backend on port 80
+  nginx:
+    image: nginx:alpine
+    container_name: nginx_proxy
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - app_network
+
+  # 6. The Daily ETL Pipeline Layer (Cron)
   pipeline:
     build:
       context: .

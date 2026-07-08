@@ -1,5 +1,4 @@
--- checkers
-select count(*) from pypi.metadata_staging ;
+select count(*) from pypi.metadata_staging ;                -- checkers
 select count(*) from pypi.package_connections_staging ;
 select count(*) from pypi.seo_cache_staging ;
 

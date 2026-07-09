@@ -39,6 +39,15 @@ function GuidePage() {
         </section>
 
         <section>
+          <h2 className="text-xl font-semibold text-white mb-2">Architecture</h2>
+          <img
+            src="/assets/architecture.png"
+            alt="PyPiMap system architecture: data pipeline, Postgres, FastAPI backend, React frontend, and deployment"
+            className="w-full rounded-lg border border-slate-700"
+          />
+        </section>
+
+        <section>
           <h2 className="text-xl font-semibold text-white mb-2">
             How to Read the Graph
           </h2>

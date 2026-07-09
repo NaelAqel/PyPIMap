@@ -6,6 +6,12 @@
 
 ---
 
+## Architecture
+
+![PyPiMap architecture diagram](./docs/architecture.png)
+
+---
+
 ## What is PyPiMap?
 
 PyPiMap lets you explore the Python package ecosystem on PyPI as a live, interactive graph. Search any package and see its full dependency network - what it depends on (needs), and what depends on it (feeds) - rendered as an explorable node graph you can click, drag, and expand.
@@ -21,10 +27,6 @@ Data is pulled from the official PyPI registry and refreshed daily via an automa
 - **Cluster batching**: large dependency sets are paginated into "show more" clusters instead of dumping hundreds of nodes at once
 - **Daily-updated data**: an automated ETL pipeline keeps package metadata and dependency graphs current
 
-## Screenshot
-
-*(add a screenshot or short GIF of the graph in action here)*
-
 ## Tech Stack
 
 **Frontend:** React, Vite, Tailwind CSS, Zustand, react-force-graph-2d
@@ -36,6 +38,8 @@ Data is pulled from the official PyPI registry and refreshed daily via an automa
 PyPiMap is built on top of:
 - [PyPIStats](https://pypistats.org) using Google BigQuery public dataset for packages' information.    
 - [PyPI](https://pypi.org) using PyPI Simple API.
+
+> Note: data in this repo may be outdated, for the latest daily-refreshed dataset, use the [Kaggle dataset](https://www.kaggle.com/datasets/naelaqel/pypi-daily-metadata-and-analytics-base-dataset/data).
 
 ## Getting Started
 

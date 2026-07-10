@@ -7,6 +7,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import psycopg
 import os
+import re
 
 app = FastAPI()
 
@@ -127,7 +128,12 @@ def get_package_info(name: str):
     seo_header = row[1]
 
     with open('/app/frontend_dist/index.html') as f:
-        frontend_html = f.read()
+        frontend_html_raw = f.read()
+    
+    # Remove title, meta og and twitter from frontend_html to avoid duplicating tags
+    frontend_html = re.sub(
+        r"<title>.*?<meta name=\"twitter:image\"[^>]*>", "", frontend_html_raw, flags=re.DOTALL
+    )
 
     # Insert SEO tags right after the opening <head> tag of the real built file
     head_tag_end = frontend_html.index('<head>') + len('<head>')

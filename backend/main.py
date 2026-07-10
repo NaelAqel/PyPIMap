@@ -578,12 +578,10 @@ def get_robots_txt():
 
 @app.get("/ai.txt", response_class=Response)
 def get_ai_txt():
-    # Signals your explicit terms directly to AI dataset curators
     content = (
         "User-agent: *\n"
-        "Permissions: crawl, cite\n"
-        "Training: deny\n"
-        "Commercial-Use: allow\n"
+        "Content-Usage: allow-crawl, allow-cite, deny-train\n"
+        "Contact: https://pypimap.com\n"
     )
     return Response(content=content, media_type="text/plain")
 

@@ -590,10 +590,17 @@ def get_ai_txt():
 def get_llms_txt():
     markdown = (
         "# PyPiMap\n\n"
-        "> Interactive python package dependency and ecosystem maps.\n\n"
-        "## Core Resources\n"
-        "- [/package/{name}](https://pypimap.com/package/{name}): Comprehensive dependency metadata and relationship metrics.\n"
-        "- [/search?q={query}](https://pypimap.com/search): Trigram exact and author search for active PyPI releases.\n"
+        "> Interactive visualization of the Python package (PyPI) dependency ecosystem. "
+        "Search any package to explore its upstream and downstream dependencies as a live graph.\n\n"
+        "## Core resources\n\n"
+        "- [Homepage](https://pypimap.com): Interactive dependency graph explorer, loads a random package by default.\n"
+        "- [Example package page](https://pypimap.com/package/numpy): Per-package dependency metadata and relationship metrics. Replace 'numpy' with any active PyPI package name.\n"
+        "- [Search](https://pypimap.com/search?q=numpy): Search packages by name or author. Replace the q parameter with your query.\n"
+        "- [Guide](https://pypimap.com/guide): How to read the graph, interactions, and full API reference.\n"
+        "- [Sitemap](https://pypimap.com/sitemap.xml): Full list of indexed packages.\n\n"
+        "## Data\n\n"
+        "Dependency data is refreshed daily via an automated pipeline. A downloadable dataset is "
+        "also available on [Kaggle](https://www.kaggle.com/datasets/naelaqel/pypi-daily-metadata-and-analytics-base-dataset/data).\n"
     )
     return Response(content=markdown, media_type="text/markdown")
 

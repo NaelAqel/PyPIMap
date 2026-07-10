@@ -79,7 +79,12 @@ gtag(''config'', ''G-R10LEPYJJE'')
         "@type": "Dataset",
         "name": "PyPI Daily Package Profiles & Analytics Graph",
         "description": "Pre-vectorized pipeline node snapshots optimized for Graph Neural Networks and dependency analysis.",
-        "url": "https://www.kaggle.com/datasets/naelaqel/pypi-daily-metadata-and-analytics-base-dataset/data"
+        "url": "https://www.kaggle.com/datasets/naelaqel/pypi-daily-metadata-and-analytics-base-dataset/data",
+        "license": "https://creativecommons.org/licenses/by/4.0/",
+        "creator": {
+            "@type": "Person",
+            "name": "Nael Aqel"
+        }
     }
 },
 {

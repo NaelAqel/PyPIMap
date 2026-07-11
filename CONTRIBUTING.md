@@ -45,5 +45,26 @@ Open your browser and navigate to the local port (e.g., `http://localhost:3000`)
    >> docker compose down
 ```
 
+## Local Frontend Development (Hot Reload)
+
+The default Docker setup serves a **production build** of the frontend — code changes won't reflect live in that container.
+
+For local development with hot-reload:
+
+1. **Start the supporting services (everything except frontend):**
+```bash
+   >> docker compose up -d postgres_db backend caddy
+   >> docker compose stop frontend
+```
+2. **Run the frontend locally:**
+```bash
+   >> cd frontend
+   >> npm install
+   >> npm run dev -- --host
+```
+3. Open the local URL Vite prints in the terminal (typically `http://localhost:3000`).
+
+> Note: Caddy routes `frontend:3000` internally, so accessing the site through `pypimap.com`/Caddy won't reflect your local changes while the `frontend` container is stopped. Use the Vite dev URL directly instead.
+
 ## Code of Conduct
 We are committed to providing a welcoming, safe, and inclusive environment for everyone. Please respect fellow contributors, use constructive language, and focus on collaborative problem

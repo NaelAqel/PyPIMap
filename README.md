@@ -51,6 +51,8 @@ PyPiMap is built on top of:
 
 Then open `http://localhost:3000` in your browser.
 
+For local frontend development with hot-reload, see the [Local Frontend Development](./CONTRIBUTING.md#local-frontend-development-hot-reload) section in CONTRIBUTING.md.
+
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for full development setup and contribution guidelines.
 
 ## Contributing

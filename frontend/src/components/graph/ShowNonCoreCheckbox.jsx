@@ -10,9 +10,9 @@ function ShowNonCoreCheckbox() {
         type="checkbox"
         checked={showNonCore}
         onChange={() => toggleShowNonCore()}
-        className="cursor-pointer"
+        className="w-4 h-4 accent-sky-500"
       />
-      Show optional packages
+      <span className="font-medium">Show optional dependencies</span>
     </label>
   );
 }

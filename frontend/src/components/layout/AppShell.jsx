@@ -15,6 +15,7 @@ const InfoLegendPanel = lazy(() => import("../panel/InfoLegendPanel"));
 const InfoLegendBottomSheet = lazy(
   () => import("../panel/InfoLegendBottomSheet"),
 );
+const OnboardingTour = lazy(() => import("../onboarding/OnboardingTour"));
 
 function AppShell() {
   const errorState = useAppStore((state) => state.errorState);
@@ -58,18 +59,25 @@ function AppShell() {
 
       <GlobalNotificationBanner />
 
+      {!isNetworkError && (
+        <Suspense fallback={null}>
+          <OnboardingTour />
+        </Suspense>
+      )}
+
       {/* Left panel: brand, search, breadcrumbs, checkbox — all in one column */}
       <div className="absolute top-4 left-4 z-10 pointer-events-auto flex flex-col gap-4 w-[280px] bg-slate-900/90 backdrop-blur-sm rounded-lg p-4 text-white border border-slate-600 shadow-lg">
         <div>
           <h1 className="text-lg font-bold">PyPiMap</h1>
           <p className="text-xs text-slate-300 mt-1">
             An interactive map of Python package dependencies on PyPI.
+
           </p>
           <a
             href="https://github.com/naelaqel/PyPIMap"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-sky-400 underline inline-block mt-2"
+            className="inline-flex items-center gap-1 text-xs font-medium bg-sky-600 hover:bg-sky-500 text-white px-2 py-1 rounded-md ml-3 mt-2 transition-colors ring-2 ring-sky-400/60"
           >
             GitHub
           </a>
@@ -77,7 +85,7 @@ function AppShell() {
             href="/guide"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs font-medium bg-sky-600 hover:bg-sky-500 text-white px-2 py-1 rounded-md ml-3 transition-colors ring-2 ring-sky-400/60"
+            className="inline-flex items-center gap-1 text-xs font-medium bg-sky-600 hover:bg-sky-500 text-white px-2 py-1 rounded-md ml-3 mt-2 transition-colors ring-2 ring-sky-400/60"
           >
             Guide
           </a>

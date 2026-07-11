@@ -24,7 +24,7 @@ function AppShell() {
   const isNetworkError = errorState && errorState.type === "network";
   const isMobile = useMediaQuery();
   const [lastUpdateDate, setLastUpdateDate] = useState(null);
-  const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const isGuidePage = window.location.pathname === "/guide";
 
   useEffect(() => {
@@ -59,7 +59,7 @@ function AppShell() {
       <GlobalNotificationBanner />
 
       {/* Left panel: brand, search, breadcrumbs, checkbox — all in one column */}
-      <div className="absolute top-4 left-4 z-10 pointer-events-auto flex flex-col gap-4 w-[280px] bg-slate-900/70 backdrop-blur-sm rounded-lg p-4 text-white">
+      <div className="absolute top-4 left-4 z-10 pointer-events-auto flex flex-col gap-4 w-[280px] bg-slate-900/90 backdrop-blur-sm rounded-lg p-4 text-white border border-slate-600 shadow-lg">
         <div>
           <h1 className="text-lg font-bold">PyPiMap</h1>
           <p className="text-xs text-slate-300 mt-1">
@@ -77,7 +77,7 @@ function AppShell() {
             href="/guide"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-sky-400 underline inline-block mt-2 ml-3"
+            className="inline-flex items-center gap-1 text-xs font-medium bg-sky-600 hover:bg-sky-500 text-white px-2 py-1 rounded-md ml-3 transition-colors ring-2 ring-sky-400/60"
           >
             Guide
           </a>
@@ -87,11 +87,15 @@ function AppShell() {
         </div>
 
         <div className="border-t border-slate-700 pt-3">
-          <SearchBar />
+          <div className="rounded-lg ring-2 ring-sky-400/60">
+            <SearchBar />
+          </div>
         </div>
 
         <div className="border-t border-slate-700 pt-3 space-y-3">
-          <ShowNonCoreCheckbox />
+          <div className="bg-slate-800/60 rounded-md p-2">
+            <ShowNonCoreCheckbox />
+          </div>
           <Breadcrumbs />
         </div>
       </div>

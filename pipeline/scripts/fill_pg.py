@@ -34,8 +34,18 @@ def main(cwd, DB_URL, change_definition=False):
                     query = query.format(cwd=f"{cwd}/pipeline", DB_URL=DB_URL)
                     duck_conn.execute(query)
 
-            # insert into seo_cache_staging
+            # run checkers on staging
+            for tbl in ['metadata_staging', 'package_connections_staging']:
+                print(f"  Checking {tbl}")
+                cursor.execute(f"select count(*) from pypi.{tbl};")
+                if cursor.fetchone()[0] < 700000:
+                    raise RuntimeError(
+                        f"Staging table {tbl} was not fill properly"
+                    )
+
+            # insert into seo_cache
             with open(f"{cwd}/pipeline/sql/insert_to_seo.sql", "r") as f:
+                print("Updating seo_cache ...")
                 query = f.read()
                 cursor.execute(query)
             pg_conn.commit()
@@ -45,16 +55,9 @@ def main(cwd, DB_URL, change_definition=False):
             # finalizing
             with open(f"{cwd}/pipeline/sql/final_step.sql", "r") as f:
                 queries = f.read().split(";")
-            
-            for query in queries[:3]:
-                print(f"  Checking {query.strip().split()[3]}")
-                if cursor.execute(query).fetchone()[0] < 700000:
-                    raise RuntimeError(
-                        f"Staging table {query.strip().split()[3]} was not fill properly"
-                    )
 
             # run indexing and analyzing (stage 1)
-            for query in queries[3:-5]:
+            for query in queries[:-5]:
                 cursor.execute(query)
             pg_conn.commit()
 

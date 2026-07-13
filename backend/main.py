@@ -5,6 +5,7 @@ from fastapi.responses import RedirectResponse, HTMLResponse, FileResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from datetime import datetime
 import psycopg
 import os
 import re
@@ -650,7 +651,11 @@ def get_static_sitemap():
 
     body = "\n".join(
         [
-            f"  <url>\n    <loc>{loc}</loc>\n    <changefreq>{changefreq}</changefreq>\n    <priority>{priority}</priority>\n  </url>"
+            f"  <url>\n"
+            f"    <loc>{loc}</loc>\n"
+            f"    <changefreq>{changefreq}</changefreq>\n"
+            f"    <priority>{priority}</priority>\n"
+            f"  </url>"
             for loc, priority, changefreq in static_pages
         ]
     )
@@ -674,24 +679,34 @@ def get_sitemap_chunk(chunk_num: int):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                select normalized_name from pypi.metadata
+                select 
+                    normalized_name, 
+                    greatest(last_upload_date, '2026-07-13') last_mod
+                from pypi.metadata
                 where is_active_package
                 order by importance_score desc, first_upload_date
                 limit %s offset %s
                 """,
                 (SITEMAP_CHUNK_SIZE, offset),
             )
-            packages = [row[0] for row in cur.fetchall()]
+            packages = [*cur.fetchall()]
 
     if not packages:
         raise HTTPException(status_code=404, detail="Sitemap chunk not found")
 
     xml_body = "\n".join(
         [
-            f"  <url>\n    <loc>https://pypimap.com/package/{pkg}</loc>\n    <changefreq>daily</changefreq>\n    <priority>0.8</priority>\n  </url>"
-            for pkg in packages
+            f"  <url>\n"
+            f"    <loc>https://pypimap.com/package/{pkg}</loc>\n"
+            f"    <changefreq>daily</changefreq>\n"
+            f"    <lastmod>{last_mod.isoformat()}Z</lastmod>\n"
+            f"    <priority>0.8</priority>\n"
+            f"  </url>"
+            for pkg, last_mod in packages
         ]
     )
+
+    print(xml_body[1])
 
     sitemap_xml = (
         f'<?xml version="1.0" encoding="UTF-8"?>\n'

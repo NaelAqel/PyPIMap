@@ -41,11 +41,6 @@ alter table pypi.package_connections_staging add primary key (id);
 
 -- create seo_cache
 create table if not exists pypi.seo_cache (
-    normalized_name         text not null
+    normalized_name         text not null primary key
     ,seo_header             text not null
 );
-
--- create seo_cache_staging table
-drop table if exists pypi.seo_cache_staging cascade;
-create table pypi.seo_cache_staging (like pypi.seo_cache);
-alter table pypi.seo_cache_staging add primary key (normalized_name);

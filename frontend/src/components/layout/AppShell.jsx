@@ -133,7 +133,7 @@ function AppShell() {
         <p>
           © 2026{" "}
           <a
-            href="https://naelaqel.com"
+            href="https://naelaqel.com?utm_source=pypi&utm_medium=footer&utm_campaign=footer"
             target="_blank"
             rel="noopener noreferrer"
             className="underline hover:text-slate-200 transition-colors"

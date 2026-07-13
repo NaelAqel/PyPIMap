@@ -1,8 +1,4 @@
-insert into pypi.seo_cache_staging
-with get_last_updated_date as (
-    select max(last_upload_date) last_updated_date
-    from pypi.metadata_staging where is_active_package
-)
+insert into pypi.seo_cache (normalized_name, seo_header)
 select  
     normalized_name,
     -- We construct the entire HTML block in a single optimized pass
@@ -143,10 +139,10 @@ gtag(''config'', ''G-R10LEPYJJE'')
         },
         {
         "@type": "Question",
-        "name": "When was this data last updated?",
+        "name": "When was ', package_name, ' last release?",
         "acceptedAnswer": {
             "@type": "Answer",
-            "text": "This dependency data was last refreshed on ', to_char((select last_updated_date from get_last_updated_date), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), ' as part of PyPiMap''s daily update pipeline."
+            "text": "', package_name, ' last release on ', to_char(last_upload_date, 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), ' ."
         }
     }
     ]
@@ -154,4 +150,6 @@ gtag(''config'', ''G-R10LEPYJJE'')
 ]
 }
 </script>') seo_header
-from pypi.metadata_staging m join pypi.package_connections_staging p using(id);
+from pypi.metadata_staging m join pypi.package_connections_staging p using(id)
+where is_active_package and last_upload_date >= CURRENT_DATE - 1
+on conflict (normalized_name) do update set seo_header = excluded.seo_header;

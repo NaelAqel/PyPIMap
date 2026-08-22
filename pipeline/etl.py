@@ -3,14 +3,14 @@ import logging
 from logging.handlers import RotatingFileHandler
 import argparse
 import os
-from scripts.etl_to_base import main as etl_to_base
-from scripts.fill_pg import main as fill_pg
+from pipeline.scripts.etl_to_raw_data import main as etl_to_raw
+from pipeline.scripts.fill_pg import main as fill_pg
 
 # start the logger
 logger = logging.getLogger(__name__)
 
 
-def main(cwd, DB_URL, seed_only=False, change_definition=False):
+def main(cwd, DB_URL, seed_only=False, recreate_tables=False):
     # config the logger
     logging.basicConfig(
         level=logging.INFO,
@@ -26,16 +26,19 @@ def main(cwd, DB_URL, seed_only=False, change_definition=False):
         logger.info("=" * 40)
         logger.info("NEW ETL RUN STARTED.")
 
+        processed_dates = None
+
         if not seed_only:
-            logger.info("Extracting from Sources to `base.parquet`")
-            etl_to_base(cwd)
+            logger.info("Extracting from Sources to `pipeline/staging/raw_data/`")
+            processed_dates = etl_to_raw(cwd)
 
         logger.info("Filling Postgres Tables")
-        fill_pg(cwd, DB_URL, change_definition)
+        fill_pg(cwd, DB_URL, recreate_tables, processed_dates)
         logger.info("ETL Finished")
     except Exception as e:
         print(f"ERROR Happened: {e}")
         logger.error("Error happened", exc_info=True)
+        raise
 
     return None
 
@@ -60,11 +63,11 @@ if __name__ == "__main__":
         "--sslmode", default=os.environ.get("POSTGRES_SSLMODE", "prefer")
     )
     parser.add_argument(
-        "--seed-only", action="store_true", help="Skip `script/etl_to_base`"
+        "--seed-only", action="store_true", help="Skip `script/etl_to_raw_data`"
     )
     # this parameter to be added in case of changing production tables definitions
     parser.add_argument(
-        "--change-definition", action="store_true", help="Change pg tables definitions"
+        "--recreate-tables", action="store_true", help="Change pg tables definitions"
     )
     args = parser.parse_args()
 
@@ -74,5 +77,5 @@ if __name__ == "__main__":
         str(base_folder.resolve()),
         f"postgresql://{args.user}:{args.password}@{args.host}:{args.port}/{args.name}?sslmode={args.sslmode}",
         args.seed_only,
-        args.change_definition,
+        args.recreate_tables,
     )

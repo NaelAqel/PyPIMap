@@ -16,4 +16,4 @@ COPY . .
 # Container logs will stream immediately to stdout without buffering
 ENV PYTHONUNBUFFERED=1
 
-CMD ["python", "-u", "pipeline/etl.py"]
+CMD ["python", "-u", "-m", "pipeline.etl"]

@@ -3,67 +3,76 @@ import duckdb
 import psycopg
 import argparse
 import os
+from datetime import date, timedelta
 
 
-def main(cwd, DB_URL, change_definition=False):
+def main(cwd, DB_URL, recreate_tables=False, processing_dates=None):
     print("################# Starting Filling Postgres Tables #################")
     print("Connecting to Postgres ... ", end="")
 
+    if processing_dates is None:
+        processing_dates = [date.today() - timedelta(days=1)]
+
     with psycopg.connect(DB_URL) as pg_conn:
         with pg_conn.cursor() as cursor:
-            if change_definition:
+            if recreate_tables:
                 print("\n  Recreate production tables due to schema changes.")
-                cursor.execute("drop table if exists pypi.metadata;")
-                cursor.execute("drop table if exists pypi.package_connections;")
 
-            with open(f"{cwd}/pipeline/sql/pg_create_tables.sql", "r") as f:
-                queries = f.read().split(";")
-
-            for query in queries[:-1]:
-                cursor.execute(query)
-            pg_conn.commit()
-            print("Done.")
-
-            with duckdb.connect() as duck_conn:
-                print("Fill staging tables ... ")
-
-                with open(f"{cwd}/pipeline/sql/duckdb_to_pg.sql", "r") as f:
+                with open(f"{cwd}/pipeline/sql/pg_create_tables.sql", "r") as f:
                     queries = f.read().split(";")
 
                 for query in queries[:-1]:
-                    query = query.format(cwd=f"{cwd}/pipeline", DB_URL=DB_URL)
-                    duck_conn.execute(query)
+                    cursor.execute(query)
+                pg_conn.commit()
+                print("Done.")
 
-            # run checkers on staging
-            for tbl in ['metadata_staging', 'package_connections_staging']:
-                print(f"  Checking {tbl}")
-                cursor.execute(f"select count(*) from pypi.{tbl};")
-                if cursor.fetchone()[0] < 700000:
-                    raise RuntimeError(
-                        f"Staging table {tbl} was not fill properly"
-                    )
+                with duckdb.connect() as duck_conn:
+                    print("Fill production tables ... ", end='')
 
-            # insert into seo_cache
-            with open(f"{cwd}/pipeline/sql/insert_to_seo.sql", "r") as f:
-                print("Updating seo_cache ...")
-                query = f.read()
-                cursor.execute(query)
-            pg_conn.commit()
+                    with open(f"{cwd}/pipeline/sql/duckdb_to_pg_migration.sql", "r") as f:
+                        queries = f.read().split(";")
 
-            print("Done inserting, finalizing postgres now ... ")
+                    for query in queries[:-1]:
+                        query = query.replace("{cwd}", cwd).replace("{DB_URL}", DB_URL)
+                        duck_conn.execute(query)
 
-            # finalizing
-            with open(f"{cwd}/pipeline/sql/final_step.sql", "r") as f:
-                queries = f.read().split(";")
+                    with open(f"{cwd}/pipeline/sql/pg_direct_migration.sql", "r") as f:
+                        queries = f.read().split(";")
 
-            # run indexing and analyzing (stage 1)
-            for query in queries[:-5]:
-                cursor.execute(query)
-            pg_conn.commit()
+                    for query in queries[:-1]:
+                        query = query.replace("{cwd}", cwd).replace("{DB_URL}", DB_URL)
+                        cursor.execute(query)
+                    print('Done')
+            else:
+                for processing_date in sorted(processing_dates):
+                    with duckdb.connect() as duck_conn:
+                        print(f"Fill production tables for {processing_date}... ", end='')
+    
+                        with open(f"{cwd}/pipeline/sql/duckdb_to_pg.sql", "r") as f:
+                            queries = f.read().split(";")
+    
+                        for query in queries[:-1]:
+                            query = query.replace("{cwd}", cwd)
+                            query = query.replace("{DB_URL}", DB_URL)
+                            query = query.replace("{year}", str(processing_date.year))
+                            query = query.replace("{month}", f"{processing_date.month:02d}")
+                            query = query.replace("{day}", f"{processing_date.day:02d}")
 
-            # run renaming (staging to production) (stage 2)
-            for query in queries[-5:-1]:
-                cursor.execute(query)
+                            duck_conn.execute(query)
+
+                        with open(f"{cwd}/pipeline/sql/pg_direct.sql", "r") as f:
+                            queries = f.read().split(";")
+    
+                        for query in queries[:-1]:
+                            query = query.replace("{cwd}", cwd)
+                            query = query.replace("{DB_URL}", DB_URL)
+                            query = query.replace("{year}", str(processing_date.year))
+                            query = query.replace("{month}", f"{processing_date.month:02d}")
+                            query = query.replace("{day}", f"{processing_date.day:02d}")
+                            cursor.execute(query)
+
+                        print("Done.")
+
             pg_conn.commit()
 
     print("Done.")
@@ -90,11 +99,15 @@ if __name__ == "__main__":
     parser.add_argument(
         "--sslmode", default=os.environ.get("POSTGRES_SSLMODE", "prefer")
     )
+    parser.add_argument(
+        "--recreate-tables", action="store_true", help="Change pg tables definitions"
+    )
     args = parser.parse_args()
 
-    base_folder = Path(__file__).resolve().parent.parent
+    base_folder = Path(__file__).resolve().parent.parent.parent
 
     main(
         str(base_folder.resolve()),
         f"postgresql://{args.user}:{args.password}@{args.host}:{args.port}/{args.name}?sslmode={args.sslmode}",
+        args.recreate_tables
     )

@@ -118,7 +118,7 @@ def get_package_info(name: str):
                 """
                 select normalized_name, seo_header 
                 from pypi.seo_cache
-                where normalized_name = %s
+                where normalized_name = %s and is_active_package
             """,
                 (name,),
             )
@@ -681,7 +681,7 @@ def get_sitemap_chunk(chunk_num: int):
                 """
                 select 
                     normalized_name, 
-                    greatest(last_upload_date, '2026-07-13') last_mod
+                    updated_at
                 from pypi.metadata
                 where is_active_package
                 order by importance_score desc, first_upload_date

@@ -151,8 +151,8 @@ function GuidePage() {
           </h2>
           <p className="text-slate-300 leading-relaxed">
             All package metadata and dependency graphs are updated once daily
-            via an automated ETL pipeline pulling from the official PyPI
-            registry.
+            via an automated ETL pipeline using the official PyPI release metadata
+            from BigQuery and active package data from the PyPI Simple API.
           </p>
           <p className="text-slate-400 text-sm mt-3">
             For deeper offline analysis (GNNs, large-scale graph algorithms,

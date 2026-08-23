@@ -53,6 +53,7 @@ For local development with hot-reload:
 
 1. **Start the supporting services (everything except frontend):**
 ```bash
+   >> docker compose up -d frontend
    >> docker compose up -d postgres_db backend caddy
    >> docker compose stop frontend
 ```

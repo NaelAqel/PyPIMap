@@ -37,12 +37,18 @@ with source as (
 prepared as (
     select
         *,
-        replace(replace(replace(replace(replace(title_name,
-            '&', '&amp;'), '"', '&quot;'), '<', '&lt;'), '>', '&gt;'), '''', '&#39;') html_title_name,
-        replace(replace(replace(replace(replace(display_name,
-            '&', '&amp;'), '"', '&quot;'), '<', '&lt;'), '>', '&gt;'), '''', '&#39;') html_display_name,
-        replace(replace(replace(replace(replace(left(last_version, 8),
-            '&', '&amp;'), '"', '&quot;'), '<', '&lt;'), '>', '&gt;'), '''', '&#39;') html_version
+        replace(replace(replace(replace(replace(title_name, chr(38), chr(38)||chr(97)||chr(109)||chr(112)||chr(59)), 
+            chr(34), chr(38)||chr(113)||chr(117)||chr(111)||chr(116)||chr(59)), chr(60), 
+            chr(38)||chr(108)||chr(116)||chr(59)), chr(62), chr(38)||chr(103)||chr(116)||chr(59)), chr(39), 
+            chr(38)||chr(35)||chr(51)||chr(57)||chr(59))        html_title_name,
+        replace(replace(replace(replace(replace(display_name, chr(38), chr(38)||chr(97)||chr(109)||chr(112)||chr(59)), 
+            chr(34), chr(38)||chr(113)||chr(117)||chr(111)||chr(116)||chr(59)), chr(60), 
+            chr(38)||chr(108)||chr(116)||chr(59)), chr(62), chr(38)||chr(103)||chr(116)||chr(59)), chr(39), 
+            chr(38)||chr(35)||chr(51)||chr(57)||chr(59))        html_display_name,
+        replace(replace(replace(replace(replace(left(last_version, 8), chr(38), chr(38)||chr(97)||chr(109)||chr(112)||chr(59)),
+            chr(34), chr(38)||chr(113)||chr(117)||chr(111)||chr(116)||chr(59)), chr(60), 
+            chr(38)||chr(108)||chr(116)||chr(59)), chr(62), chr(38)||chr(103)||chr(116)||chr(59)), chr(39), 
+            chr(38)||chr(35)||chr(51)||chr(57)||chr(59))        html_version
     from source
 ),
 rendered as (

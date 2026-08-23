@@ -24,9 +24,9 @@ select
     ,min(upload_date) over(partition by normalized_name)            first_upload_date
     ,upload_date                                                    last_upload_date
     ,is_active_package
-from '{cwd}/pipeline/staging/raw_data/**/*.parquet'
+from '{cwd}/pipeline/staging/raw_data/**/*.parquet' q
 join pypi.indecies_stage using(normalized_name) 
-qualify row_number() over(partition by normalized_name order by upload_date desc, inserted_at desc) = 1;
+qualify row_number() over(partition by normalized_name order by upload_date desc, q.inserted_at desc) = 1;
 
 
 create temp table dependencies as
@@ -47,7 +47,7 @@ left join pypi.indecies_stage parent
     on parent.normalized_name = lower(regexp_replace(child.dependency, '[-._]+', '-', 'g'))
 join last_records parent_last_records
     on parent.normalized_name = parent_last_records.normalized_name
-where parent_last_records.is_active_package;;
+where parent_last_records.is_active_package;
 
 
 insert into pypi.metadata_cdc_stage (
@@ -64,8 +64,8 @@ with raw_with_id as (
         ,version                  
         ,upload_date         
         ,is_active_package
-        ,inserted_at
-    from '{cwd}/pipeline/staging/raw_data/**/*.parquet'
+        ,q.inserted_at
+    from '{cwd}/pipeline/staging/raw_data/**/*.parquet' q
     join pypi.indecies_stage using(normalized_name)
 ), 
 track_changes as (
@@ -105,7 +105,16 @@ with children_counts as (
     group by parent_id
 )    
 select 
-    lr.*
+    lr.id
+    ,package_name
+    ,normalized_name
+    ,author
+    ,home_page
+    ,last_version
+    ,releases_count
+    ,first_upload_date
+    ,last_upload_date
+    ,is_active_package
     ,coalesce(children_core_counts, 0)+0.3*coalesce(children_non_core_counts, 0)    importance_score
 from last_records lr left join children_counts c on lr.id = c.parent_id;
 
@@ -117,7 +126,7 @@ insert into pypi.package_connections_stage (
 )
 with parents as (
     select 
-        child_id id id 
+        child_id id 
         ,count(case when is_core_parent and parent_id is not null then 1 end)       parent_core_counts
         ,count(case when not is_core_parent and parent_id is not null then 1 end)   parent_non_core_counts
         ,array_agg(parent_id order by parent_id) 

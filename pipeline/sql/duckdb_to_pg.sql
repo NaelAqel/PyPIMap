@@ -46,47 +46,10 @@ select
     ,min(upload_date) over(partition by normalized_name)            first_upload_date
     ,upload_date
     ,is_active_package
-from '{cwd}/pipeline/staging/raw_data/**/*.parquet'
+from '{cwd}/pipeline/staging/raw_data/**/*.parquet' q
 join pypi.indecies using(normalized_name) 
 where normalized_name in (select normalized_name from changed_packages)
-qualify row_number() over(partition by normalized_name order by upload_date desc, inserted_at desc) = 1;
-
-
-create temp table dependencies as
-with extracted as (
-    select 
-        *
-        ,regexp_extract(unnest(requires_dist), '^([a-zA-Z0-9._-]+)', 1)              dependency 
-        ,regexp_extract(unnest(requires_dist), 'extra == ["'']([^"'' ]+)["'']', 1)   extra_name
-    from last_records
-    where is_active_package
-)
-select distinct 
-    child.id                                                                        child_id
-    ,parent.id                                                                      parent_id
-    ,child.extra_name is null or child.extra_name = ''                              is_core_parent
-from extracted child 
-left join pypi.metadata parent_metadata
-    on parent.id = parent_metadata.id
-left join last_records parent_last_records
-    on parent.id = parent_last_records.id
-where coalesce(parent_last_records.is_active_package, parent_metadata.is_active_package, false);
-
-
-create temp table old_dependencies as
-select 
-    pc.id                                   child_id
-    ,unnest(pc.parent_core_ids)             parent_id
-    ,true                                   is_core_parent
-from pypi.package_connections pc
-join changed_packages ch on pc.id = ch.id
-union
-select 
-    pc.id
-    ,unnest(pc.parent_non_core_ids)
-    ,false
-from pypi.package_connections pc
-join changed_packages ch on pc.id = ch.id;
+qualify row_number() over(partition by normalized_name order by upload_date desc, q.inserted_at desc) = 1;
 
 
 insert into pypi.metadata_cdc (
@@ -136,14 +99,14 @@ select
     ,ch.inserted_at
 from changes ch
 where prev_state is null 
-    or previous_state is distinct from current_state
+    or prev_state is distinct from current_state
 order by ch.upload_date, ch.inserted_at; 
 
 
 insert into pypi.metadata (
     id, package_name, normalized_name, author, home_page, last_version, 
     releases_count, first_upload_date, last_upload_date, is_active_package, 
-    importance_score
+    importance_score, inserted_at, updated_at
 )   
 select 
     id
@@ -157,6 +120,8 @@ select
     ,upload_date            last_upload_date
     ,is_active_package
     ,0                      importance_score
+    ,now()                  inserted_at
+    ,now()                  updated_at
 from last_records lr
 on conflict (id) do update set
     package_name        = excluded.package_name
@@ -179,10 +144,48 @@ where row(
 );
 
 
+create temp table dependencies as
+with extracted as (
+    select 
+        *
+        ,regexp_extract(unnest(requires_dist), '^([a-zA-Z0-9._-]+)', 1)              dependency 
+        ,regexp_extract(unnest(requires_dist), 'extra == ["'']([^"'' ]+)["'']', 1)   extra_name
+    from last_records
+    where is_active_package
+)
+select distinct 
+    child.id                                                                        child_id
+    ,parent.id                                                                      parent_id
+    ,child.extra_name is null or child.extra_name = ''                              is_core_parent
+from extracted child 
+left join pypi.metadata parent
+    on parent.normalized_name = lower(regexp_replace(child.dependency, '[-._]+', '-', 'g'))
+left join last_records parent_last_records
+    on parent.normalized_name = parent_last_records.normalized_name
+where coalesce(parent_last_records.is_active_package, parent.is_active_package, false);
+
+
+create temp table old_dependencies as
+select 
+    pc.id                                   child_id
+    ,unnest(pc.parent_core_ids)             parent_id
+    ,true                                   is_core_parent
+from pypi.package_connections pc
+join changed_packages ch on pc.id = ch.id
+union
+select 
+    pc.id
+    ,unnest(pc.parent_non_core_ids)
+    ,false
+from pypi.package_connections pc
+join changed_packages ch on pc.id = ch.id;
+
+
 insert into pypi.package_connections (
     id, is_active_package, parent_core_counts, parent_non_core_counts,
     children_core_counts, children_non_core_counts, parent_core_ids,
-    parent_non_core_ids, children_core_ids, children_non_core_ids
+    parent_non_core_ids, children_core_ids, children_non_core_ids,
+    inserted_at, updated_at
 )
 with affected_parents as (
     select distinct parent_id id from old_dependencies
@@ -216,7 +219,7 @@ parents as (
         ,count(case when is_core_parent and parent_id is not null then 1 end)       parent_core_counts
         ,count(case when not is_core_parent and parent_id is not null then 1 end)   parent_non_core_counts
         ,array_agg(parent_id order by parent_id) 
-            (where is_core_parent and parent_id is not null)                        parent_core_ids
+            filter (where is_core_parent and parent_id is not null)                 parent_core_ids
         ,array_agg(parent_id order by parent_id) 
             filter (where not is_core_parent and parent_id is not null)             parent_non_core_ids
     from changed_packages ch
@@ -258,6 +261,8 @@ select
         else coalesce(old.children_core_ids, array[]::int[]) end                    children_core_ids
     ,case when ap.id is not null then coalesce(c.children_non_core_ids, array[]::int[])
         else coalesce(old.children_non_core_ids, array[]::int[]) end                children_non_core_ids
+    ,now()                                                                          inserted_at
+    ,now()                                                                          updated_at
 from affected_ids a
 join pypi.metadata m using(id)
 left join pypi.package_connections old using(id)

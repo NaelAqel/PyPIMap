@@ -31,13 +31,13 @@ Data is pulled from the official PyPI registry and refreshed daily via an automa
 
 **Frontend:** React, Vite, Tailwind CSS, Zustand, react-force-graph-2d
 **Backend:** FastAPI, PostgreSQL (hosted on Neon)
-**Pipeline:** DuckDB-based daily ETL, orchestrated via GitHub Actions
+**Pipeline:** DuckDB and PostgreSQL based daily ETL, orchestrated via cron job
 
 ## Data Sources & Attribution
 
 PyPiMap is built on top of:
-- [PyPIStats](https://pypistats.org) using Google BigQuery public dataset for packages' information.    
-- [PyPI](https://pypi.org) using PyPI Simple API.
+- [PyPIStats](https://pypistats.org) distribution metdata from the Google BigQuery public dataset.    
+- [PyPI](https://pypi.org) using PyPI Simple API for validating active packages.
 
 > Note: data in this repo may be outdated, for the latest daily-refreshed dataset, use the [Kaggle dataset](https://www.kaggle.com/datasets/naelaqel/pypi-daily-metadata-and-analytics-base-dataset/data).
 

@@ -21,7 +21,7 @@ To keep the project clean, scalable, and easy to maintain, please take a look at
 * Ensure your code adheres to standard styling conventions (e.g., PEP 8 for Python backend code, Prettier for frontend assets).
 * Keep your commits focused, descriptive, and clean.
 * Write or update tests if applicable.
-* Open a Pull Request (PR) with a clear description of what your code solves or introduces.
+* Open your Pull Request (PR) against `dev` with a clear description of what your code solves or introduces.
 
 ---
 
@@ -53,6 +53,7 @@ For local development with hot-reload:
 
 1. **Start the supporting services (everything except frontend):**
 ```bash
+   >> docker compose up -d frontend
    >> docker compose up -d postgres_db backend caddy
    >> docker compose stop frontend
 ```

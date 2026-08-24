@@ -67,6 +67,16 @@ def elt_bigquery_to_raw_data(cwd, missing_dates=None):
     with open(f"{cwd}/pipeline/sql/merged_to_raw_data.sql", "r") as f:
         add_active_column_query = f.read()
 
+    raw_schema = pa.schema([
+        ("package_name", pa.string()),
+        ("normalized_name", pa.string()),
+        ("author", pa.string()),
+        ("home_page", pa.string()),
+        ("requires_dist", pa.list_(pa.string())),
+        ("version", pa.string()),
+        ("upload_date", pa.timestamp("us", tz="UTC")),
+    ])
+
     with duckdb.connect() as duck_conn:
         for day in missing_dates:
             start_date, end_date = day.strftime("%Y-%m-%d"), (day + timedelta(days=1)).strftime("%Y-%m-%d")
@@ -78,7 +88,12 @@ def elt_bigquery_to_raw_data(cwd, missing_dates=None):
             output_dir.mkdir(parents=True, exist_ok=True)    
             
             print(f"  Writing data to `year={day.year}/month={day.month:02d}/{day.day:02d}.parquet` ... ", end="")
-            pq.write_table(data.to_arrow(), f'{cwd}/pipeline/staging/tmp.parquet', compression="ZSTD")
+            with pq.ParquetWriter(f'{cwd}/pipeline/staging/tmp.parquet', raw_schema, compression="ZSTD") as writer:
+                for page in data.result(page_size=10_000).pages:
+                    rows = [{key: value for key, value in row.items()} for row in page]
+                    if rows:
+                        writer.write_table(pa.Table.from_pylist(rows, schema=raw_schema))
+
             duck_conn.execute(add_active_column_query.format(cwd=cwd, file_name=f'{str(output_dir.resolve())}/{day.day:02d}.parquet'))
             print("Done.")
         

@@ -128,16 +128,19 @@ def get_package_info(name: str):
                 raise HTTPException(status_code=404, detail="Package not found")
     seo_header = row[1]
 
-    with open('/app/frontend_dist/index.html') as f:
+    with open("/app/frontend_dist/index.html") as f:
         frontend_html_raw = f.read()
-    
+
     # Remove title, meta og and twitter from frontend_html to avoid duplicating tags
     frontend_html = re.sub(
-        r"<title>.*?<meta name=\"twitter:image\"[^>]*>", "", frontend_html_raw, flags=re.DOTALL
+        r"<title>.*?<meta name=\"twitter:image\"[^>]*>",
+        "",
+        frontend_html_raw,
+        flags=re.DOTALL,
     )
 
     # Insert SEO tags right after the opening <head> tag of the real built file
-    head_tag_end = frontend_html.index('<head>') + len('<head>')
+    head_tag_end = frontend_html.index("<head>") + len("<head>")
     full_html = frontend_html[:head_tag_end] + seo_header + frontend_html[head_tag_end:]
 
     return HTMLResponse(content=full_html, status_code=200)

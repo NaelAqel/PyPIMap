@@ -1,3 +1,9 @@
+set memory_limit = '1GB';
+set threads = 2;
+set preserve_insertion_order = false;
+set temp_directory = '{cwd}/pipeline/staging/duckdb_tmp';
+
+
 install postgres;
 load postgres;
 attach '{DB_URL}' as pg (type postgres, read_write);

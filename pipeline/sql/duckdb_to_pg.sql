@@ -1,3 +1,9 @@
+set memory_limit = '1GB';
+set threads = 2;
+set preserve_insertion_order = false;
+set temp_directory = '{cwd}/pipeline/staging/duckdb_tmp';
+
+
 install postgres;
 load postgres;
 attach '{DB_URL}' as pg (type postgres, read_write);
@@ -103,6 +109,9 @@ where prev_state is null
 order by ch.upload_date, ch.inserted_at; 
 
 
+drop table if exists daily_raw;
+
+
 insert into pypi.metadata (
     id, package_name, normalized_name, author, home_page, last_version, 
     releases_count, first_upload_date, last_upload_date, is_active_package, 
@@ -163,6 +172,9 @@ left join pypi.metadata parent
 left join last_records parent_last_records
     on parent.normalized_name = parent_last_records.normalized_name
 where coalesce(parent_last_records.is_active_package, parent.is_active_package, false);
+
+
+drop table if exists last_records;
 
 
 create temp table old_dependencies as
@@ -290,3 +302,8 @@ where row(
     excluded.children_core_counts, excluded.children_non_core_counts, excluded.parent_core_ids, 
     excluded.parent_non_core_ids, excluded.children_core_ids, excluded.children_non_core_ids
 );
+
+
+drop table if exists old_dependencies;
+drop table if exists dependencies;
+drop table if exists changed_packages;

@@ -1,9 +1,10 @@
-from pathlib import Path
-import duckdb
-import psycopg
 import argparse
 import os
 from datetime import date, timedelta
+from pathlib import Path
+
+import duckdb
+import psycopg
 
 
 def main(cwd, DB_URL, recreate_tables=False, processing_dates=None):
@@ -13,71 +14,69 @@ def main(cwd, DB_URL, recreate_tables=False, processing_dates=None):
     if processing_dates is None:
         processing_dates = [date.today() - timedelta(days=1)]
 
-    with psycopg.connect(DB_URL) as pg_conn:
-        with pg_conn.cursor() as cursor:
-            if recreate_tables:
-                print("\n  Recreate production tables due to schema changes.")
+    with psycopg.connect(DB_URL) as pg_conn, pg_conn.cursor() as cursor:
+        if recreate_tables:
+            print("\n  Recreate production tables due to schema changes.")
 
-                with open(f"{cwd}/pipeline/sql/pg_create_tables.sql", "r") as f:
+            with open(f"{cwd}/pipeline/sql/pg_create_tables.sql", "r") as f:
+                queries = f.read().split(";")
+
+            for query in queries[:-1]:
+                cursor.execute(query)
+            pg_conn.commit()
+            print("Done.")
+
+            with duckdb.connect() as duck_conn:
+                print("Fill production tables ... ", end="")
+
+                with open(f"{cwd}/pipeline/sql/duckdb_to_pg_migration.sql", "r") as f:
                     queries = f.read().split(";")
 
                 for query in queries[:-1]:
+                    query = query.replace("{cwd}", cwd).replace("{DB_URL}", DB_URL)
+                    duck_conn.execute(query)
+
+                with open(f"{cwd}/pipeline/sql/pg_direct_migration.sql", "r") as f:
+                    queries = f.read().split(";")
+
+                for query in queries[:-1]:
+                    query = query.replace("{cwd}", cwd).replace("{DB_URL}", DB_URL)
                     cursor.execute(query)
-                pg_conn.commit()
-                print("Done.")
-
+                print("Done")
+        else:
+            for processing_date in sorted(processing_dates):
                 with duckdb.connect() as duck_conn:
-                    print("Fill production tables ... ", end='')
+                    print(f"Fill production tables for {processing_date}... ", end="")
 
-                    with open(f"{cwd}/pipeline/sql/duckdb_to_pg_migration.sql", "r") as f:
+                    with open(f"{cwd}/pipeline/sql/duckdb_to_pg.sql", "r") as f:
                         queries = f.read().split(";")
 
                     for query in queries[:-1]:
-                        query = query.replace("{cwd}", cwd).replace("{DB_URL}", DB_URL)
+                        query = query.replace("{cwd}", cwd)
+                        query = query.replace("{DB_URL}", DB_URL)
+                        query = query.replace("{year}", str(processing_date.year))
+                        query = query.replace("{month}", f"{processing_date.month:02d}")
+                        query = query.replace("{day}", f"{processing_date.day:02d}")
+
                         duck_conn.execute(query)
 
-                    with open(f"{cwd}/pipeline/sql/pg_direct_migration.sql", "r") as f:
+                    with open(f"{cwd}/pipeline/sql/pg_direct.sql", "r") as f:
                         queries = f.read().split(";")
 
                     for query in queries[:-1]:
-                        query = query.replace("{cwd}", cwd).replace("{DB_URL}", DB_URL)
+                        query = query.replace("{cwd}", cwd)
+                        query = query.replace("{DB_URL}", DB_URL)
+                        query = query.replace("{year}", str(processing_date.year))
+                        query = query.replace("{month}", f"{processing_date.month:02d}")
+                        query = query.replace("{day}", f"{processing_date.day:02d}")
                         cursor.execute(query)
-                    print('Done')
-            else:
-                for processing_date in sorted(processing_dates):
-                    with duckdb.connect() as duck_conn:
-                        print(f"Fill production tables for {processing_date}... ", end='')
-    
-                        with open(f"{cwd}/pipeline/sql/duckdb_to_pg.sql", "r") as f:
-                            queries = f.read().split(";")
-    
-                        for query in queries[:-1]:
-                            query = query.replace("{cwd}", cwd)
-                            query = query.replace("{DB_URL}", DB_URL)
-                            query = query.replace("{year}", str(processing_date.year))
-                            query = query.replace("{month}", f"{processing_date.month:02d}")
-                            query = query.replace("{day}", f"{processing_date.day:02d}")
 
-                            duck_conn.execute(query)
+                    print("Done.")
 
-                        with open(f"{cwd}/pipeline/sql/pg_direct.sql", "r") as f:
-                            queries = f.read().split(";")
-    
-                        for query in queries[:-1]:
-                            query = query.replace("{cwd}", cwd)
-                            query = query.replace("{DB_URL}", DB_URL)
-                            query = query.replace("{year}", str(processing_date.year))
-                            query = query.replace("{month}", f"{processing_date.month:02d}")
-                            query = query.replace("{day}", f"{processing_date.day:02d}")
-                            cursor.execute(query)
-
-                        print("Done.")
-
-            pg_conn.commit()
+        pg_conn.commit()
 
     print("Done.")
     print("####################################################################")
-    return None
 
 
 if __name__ == "__main__":
@@ -109,5 +108,5 @@ if __name__ == "__main__":
     main(
         str(base_folder.resolve()),
         f"postgresql://{args.user}:{args.password}@{args.host}:{args.port}/{args.name}?sslmode={args.sslmode}",
-        args.recreate_tables
+        args.recreate_tables,
     )

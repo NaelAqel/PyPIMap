@@ -1,11 +1,12 @@
+import re
+from datetime import date, timedelta
+from pathlib import Path
+
+import duckdb
 import httpx
 import pyarrow as pa
 import pyarrow.parquet as pq
 from google.cloud import bigquery
-from pathlib import Path
-import duckdb
-import re
-from datetime import date, timedelta
 
 
 def get_last_packages(cwd):
@@ -34,7 +35,6 @@ def get_last_packages(cwd):
         compression="ZSTD",
     )
     print("Done.\n")
-    return None
 
 
 def get_missed_raw_dates(cwd):

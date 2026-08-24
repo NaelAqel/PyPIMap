@@ -1,8 +1,8 @@
-from pathlib import Path
-import logging
-from logging.handlers import RotatingFileHandler
 import argparse
+import logging
 import os
+from pathlib import Path
+
 from pipeline.scripts.etl_to_raw_data import main as etl_to_raw
 from pipeline.scripts.fill_pg import main as fill_pg
 
@@ -39,8 +39,6 @@ def main(cwd, DB_URL, seed_only=False, recreate_tables=False):
         print(f"ERROR Happened: {e}")
         logger.error("Error happened", exc_info=True)
         raise
-
-    return None
 
 
 if __name__ == "__main__":

@@ -1,4 +1,8 @@
 pypimap.com {
+    handle /90e41cf4643c4427a27760a868da4bdd.txt {
+        reverse_proxy backend:8000
+    }
+
     handle /package/* {
         reverse_proxy backend:8000
     }

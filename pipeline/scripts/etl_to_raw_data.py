@@ -1,5 +1,5 @@
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import duckdb
@@ -39,7 +39,7 @@ def get_last_packages(cwd):
 
 def get_missed_raw_dates(cwd):
     start_date = date(2005, 3, 21)
-    end_date = date.today() - timedelta(days=1)
+    end_date = datetime.now(timezone.utc).date() - timedelta(days=1)
 
     return [
         day
@@ -120,7 +120,7 @@ def elt_bigquery_to_raw_data(cwd, missing_dates=None):
             duck_conn.execute(
                 add_active_column_query.format(
                     cwd=cwd,
-                    file_name=f"{str(output_dir.resolve())}/{day.day:02d}.parquet",
+                    file_name=f"{output_dir.resolve()!s}/{day.day:02d}.parquet",
                 )
             )
             print("Done.")

@@ -1,11 +1,12 @@
 import argparse
 import os
-from datetime import date, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from pipeline.scripts.indexnow import submit_to_indexnow
 
 import duckdb
 import psycopg
+
+from pipeline.scripts.indexnow import submit_to_indexnow
 
 
 def main(cwd, DB_URL, recreate_tables=False, processing_dates=None):
@@ -13,7 +14,7 @@ def main(cwd, DB_URL, recreate_tables=False, processing_dates=None):
     print("Connecting to Postgres ... ", end="")
 
     if processing_dates is None:
-        processing_dates = [date.today() - timedelta(days=1)]
+        processing_dates = [datetime.now(timezone.utc).date() - timedelta(days=1)]
 
     with psycopg.connect(DB_URL) as pg_conn, pg_conn.cursor() as cursor:
         cursor.execute("select clock_timestamp()")

@@ -96,7 +96,7 @@ def get_meta():
 @app.get("/search")
 @limiter.limit("60/minute")
 def search_packages(
-    request: Request, q: str = None, limit: int = Query(10, ge=1, le=50)
+    request: Request, q: str | None = None, limit: int = Query(10, ge=1, le=50)
 ):
     if not q:
         raise HTTPException(status_code=400, detail="query to search `q` is required")
@@ -116,7 +116,7 @@ def search_packages(
 
 
 @app.get("/package/{name}", response_class=HTMLResponse)
-def get_package_info(name: str):
+def get_package_page(name: str):
     with psycopg.connect(DATABASE_URL) as conn, conn.cursor() as cur:
         cur.execute(
             """
@@ -152,7 +152,7 @@ def get_package_info(name: str):
 
 @app.get("/package/api/{name}")
 @limiter.limit("60/minute")
-def get_package_info(request: Request, name: str):
+def get_package_api(request: Request, name: str):
     with psycopg.connect(DATABASE_URL) as conn, conn.cursor() as cur:
         cur.execute(
             """
@@ -202,7 +202,7 @@ def get_package_info(request: Request, name: str):
 @limiter.limit("30/minute")
 def get_graph_parents(
     request: Request,
-    name: str = None,
+    name: str | None = None,
     depth: int = Query(2, ge=1, le=4),
     offset: int = 0,
     node_cap: int = Query(150, ge=10, le=500),
@@ -386,7 +386,7 @@ def get_graph_parents(
 @limiter.limit("30/minute")
 def get_graph_children(
     request: Request,
-    name: str = None,
+    name: str | None = None,
     depth: int = Query(2, ge=1, le=4),
     offset: int = 0,
     node_cap: int = Query(150, ge=10, le=500),

@@ -37,7 +37,7 @@ def main(cwd, DB_URL, seed_only=False, recreate_tables=False):
         logger.info("ETL Finished")
     except Exception as e:
         print(f"ERROR Happened: {e}")
-        logger.error("Error happened", exc_info=True)
+        logger.exception("Error happened")
         raise
 
 

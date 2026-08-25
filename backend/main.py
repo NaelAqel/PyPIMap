@@ -4,7 +4,12 @@ import re
 import psycopg
 from fastapi import FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    PlainTextResponse,
+    RedirectResponse,
+)
 from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -12,7 +17,7 @@ from slowapi.util import get_remote_address
 
 app = FastAPI()
 
-SITEMAP_CHUNK_SIZE = 45000
+SITEMAP_CHUNK_SIZE = 50000
 
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
@@ -28,6 +33,9 @@ CACHEABLE_PATH_PREFIXES = (
     "/llms.txt",
     "/last_update",
 )
+
+
+INDEXNOW_KEY = os.environ.get("INDEXNOW_KEY", "90e41cf4643c4427a27760a868da4bdd")
 
 
 @app.middleware("http")
@@ -88,7 +96,7 @@ def get_meta():
 @app.get("/search")
 @limiter.limit("60/minute")
 def search_packages(
-    request: Request, q: str = None, limit: int = Query(10, ge=1, le=50)
+    request: Request, q: str | None = None, limit: int = Query(10, ge=1, le=50)
 ):
     if not q:
         raise HTTPException(status_code=400, detail="query to search `q` is required")
@@ -108,7 +116,7 @@ def search_packages(
 
 
 @app.get("/package/{name}", response_class=HTMLResponse)
-def get_package_info(name: str):
+def get_package_page(name: str):
     with psycopg.connect(DATABASE_URL) as conn, conn.cursor() as cur:
         cur.execute(
             """
@@ -144,7 +152,7 @@ def get_package_info(name: str):
 
 @app.get("/package/api/{name}")
 @limiter.limit("60/minute")
-def get_package_info(request: Request, name: str):
+def get_package_api(request: Request, name: str):
     with psycopg.connect(DATABASE_URL) as conn, conn.cursor() as cur:
         cur.execute(
             """
@@ -194,7 +202,7 @@ def get_package_info(request: Request, name: str):
 @limiter.limit("30/minute")
 def get_graph_parents(
     request: Request,
-    name: str = None,
+    name: str | None = None,
     depth: int = Query(2, ge=1, le=4),
     offset: int = 0,
     node_cap: int = Query(150, ge=10, le=500),
@@ -378,7 +386,7 @@ def get_graph_parents(
 @limiter.limit("30/minute")
 def get_graph_children(
     request: Request,
-    name: str = None,
+    name: str | None = None,
     depth: int = Query(2, ge=1, le=4),
     offset: int = 0,
     node_cap: int = Query(150, ge=10, le=500),
@@ -600,6 +608,11 @@ def get_llms_txt():
         "also available on [Kaggle](https://www.kaggle.com/datasets/naelaqel/pypi-daily-metadata-and-analytics-base-dataset/data).\n"
     )
     return Response(content=markdown, media_type="text/markdown")
+
+
+@app.get(f"/{INDEXNOW_KEY}.txt", response_class=PlainTextResponse)
+def indexnow_key():
+    return INDEXNOW_KEY
 
 
 @app.get("/sitemap.xml", response_class=Response)

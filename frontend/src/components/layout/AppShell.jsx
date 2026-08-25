@@ -68,7 +68,7 @@ function AppShell() {
       {/* Left panel: brand, search, breadcrumbs, checkbox — all in one column */}
       <div className="absolute top-4 left-4 z-10 pointer-events-auto flex flex-col gap-4 w-[280px] bg-slate-900/90 backdrop-blur-sm rounded-lg p-4 text-white border border-slate-600 shadow-lg">
         <div>
-          <h1 className="text-lg font-bold">PyPiMap</h1>
+          <div className="text-lg font-bold">PyPiMap</div>
           <p className="text-xs text-slate-300 mt-1">
             An interactive map of Python package dependencies on PyPI.
 

@@ -1,5 +1,6 @@
 import os
 import re
+from html import escape
 
 import psycopg
 from fastapi import FastAPI, HTTPException, Query, Request, Response, status
@@ -131,6 +132,7 @@ def get_package_page(name: str):
         if row is None:
             raise HTTPException(status_code=404, detail="Package not found")
     seo_header = row[1]
+    package_h1 = f'<h1>{escape(row[0])}</h1>'
 
     with open("/app/frontend_dist/index.html") as f:
         frontend_html_raw = f.read()
@@ -145,7 +147,14 @@ def get_package_page(name: str):
 
     # Insert SEO tags right after the opening <head> tag of the real built file
     head_tag_end = frontend_html.index("<head>") + len("<head>")
-    full_html = frontend_html[:head_tag_end] + seo_header + frontend_html[head_tag_end:]
+    body_tag_end = frontend_html.index("<body>") + len("<body>")
+    full_html = (
+        frontend_html[:head_tag_end]
+        + seo_header
+        + frontend_html[head_tag_end:body_tag_end]
+        + package_h1
+        + frontend_html[body_tag_end:]
+    )
 
     return HTMLResponse(content=full_html, status_code=200)
 

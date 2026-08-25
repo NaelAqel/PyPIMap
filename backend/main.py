@@ -94,6 +94,11 @@ def get_meta():
     return {"last_updated_date": result[0]}
 
 
+@app.get(f"/{INDEXNOW_KEY}.txt", response_class=PlainTextResponse)
+def indexnow_key():
+    return INDEXNOW_KEY
+
+
 @app.get("/search")
 @limiter.limit("60/minute")
 def search_packages(
@@ -132,7 +137,7 @@ def get_package_page(name: str):
         if row is None:
             raise HTTPException(status_code=404, detail="Package not found")
     seo_header = row[1]
-    package_h1 = f'<h1>{escape(row[0])}</h1>'
+    package_h1 = f"<h1>{escape(row[0])}</h1>"
 
     with open("/app/frontend_dist/index.html") as f:
         frontend_html_raw = f.read()
@@ -617,11 +622,6 @@ def get_llms_txt():
         "also available on [Kaggle](https://www.kaggle.com/datasets/naelaqel/pypi-daily-metadata-and-analytics-base-dataset/data).\n"
     )
     return Response(content=markdown, media_type="text/markdown")
-
-
-@app.get(f"/{INDEXNOW_KEY}.txt", response_class=PlainTextResponse)
-def indexnow_key():
-    return INDEXNOW_KEY
 
 
 @app.get("/sitemap.xml", response_class=Response)

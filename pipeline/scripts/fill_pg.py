@@ -2,6 +2,7 @@ import argparse
 import os
 from datetime import date, timedelta
 from pathlib import Path
+from pipeline.scripts.indexnow import submit_to_indexnow
 
 import duckdb
 import psycopg
@@ -15,6 +16,9 @@ def main(cwd, DB_URL, recreate_tables=False, processing_dates=None):
         processing_dates = [date.today() - timedelta(days=1)]
 
     with psycopg.connect(DB_URL) as pg_conn, pg_conn.cursor() as cursor:
+        cursor.execute("select clock_timestamp()")
+        etl_started_at = cursor.fetchone()[0]
+
         if recreate_tables:
             print("\n  Recreate production tables due to schema changes.")
 
@@ -74,6 +78,22 @@ def main(cwd, DB_URL, recreate_tables=False, processing_dates=None):
                     print("Done.")
 
         pg_conn.commit()
+
+        print("Submitting updated pages to IndexNow ... ", end="")
+        cursor.execute(
+            """
+            select normalized_name
+            from pypi.metadata
+            where updated_at >= %s
+            order by importance_score desc
+            """,
+            (etl_started_at,),
+        )
+
+        changed_packages = [row[0] for row in cursor.fetchall()]
+        submit_to_indexnow(changed_packages)
+
+        print("Done.")
 
     print("Done.")
     print("####################################################################")

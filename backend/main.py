@@ -4,7 +4,12 @@ import re
 import psycopg
 from fastapi import FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    PlainTextResponse,
+    RedirectResponse,
+)
 from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -12,7 +17,7 @@ from slowapi.util import get_remote_address
 
 app = FastAPI()
 
-SITEMAP_CHUNK_SIZE = 45000
+SITEMAP_CHUNK_SIZE = 50000
 
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
@@ -28,6 +33,9 @@ CACHEABLE_PATH_PREFIXES = (
     "/llms.txt",
     "/last_update",
 )
+
+
+INDEXNOW_KEY = os.environ.get("INDEXNOW_KEY", "90e41cf4643c4427a27760a868da4bdd")
 
 
 @app.middleware("http")
@@ -600,6 +608,11 @@ def get_llms_txt():
         "also available on [Kaggle](https://www.kaggle.com/datasets/naelaqel/pypi-daily-metadata-and-analytics-base-dataset/data).\n"
     )
     return Response(content=markdown, media_type="text/markdown")
+
+
+@app.get(f"/{INDEXNOW_KEY}.txt", response_class=PlainTextResponse)
+def indexnow_key():
+    return INDEXNOW_KEY
 
 
 @app.get("/sitemap.xml", response_class=Response)

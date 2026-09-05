@@ -35,9 +35,10 @@ PyPiMap's data is refreshed daily through an automated ETL pipeline.
 
 ## Tech Stack
 
-**Frontend:** React, Vite, Tailwind CSS, Zustand, react-force-graph-2d
-**Backend:** FastAPI, PostgreSQL    
-**Pipeline:** DuckDB and PostgreSQL-based ETL pipeline, orchestrated through scheduled jobs
+- **Frontend:** React, Vite, Tailwind CSS, Zustand, react-force-graph-2d
+- **Backend:** FastAPI, PostgreSQL    
+- **Pipeline:** DuckDB and PostgreSQL-based ETL pipeline, orchestrated through scheduled jobs
+- **Infrastructure:** Hetzner hosting with Cloudflare for DNS, proxying, and edge delivery.
 
 
 ## Data Pipeline

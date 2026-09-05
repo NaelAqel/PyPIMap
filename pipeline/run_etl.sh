@@ -29,7 +29,7 @@ docker compose --profile cron run --rm \
 
 echo "Checking for changes..."
 
-git add pipeline/raw_data/
+git add pipeline/staging/
 
 if git diff --cached --quiet; then
     echo "No new data."

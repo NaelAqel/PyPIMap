@@ -3,10 +3,11 @@
 set -e
 
 cd /app/prod
+source .env
 
 echo "Getting GitHub installation token..."
 
-TOKEN=$(python github_app_token.py)
+TOKEN=$(python pipeline/github_app_token.py)
 
 echo "Configuring Git authentication..."
 

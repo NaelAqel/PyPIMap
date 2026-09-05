@@ -5,3 +5,4 @@ google-cloud-bigquery
 duckdb
 PyJWT
 requests
+cryptography

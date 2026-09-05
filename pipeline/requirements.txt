@@ -3,3 +3,6 @@ httpx
 pyarrow
 google-cloud-bigquery
 duckdb
+PyJWT
+requests
+cryptography

@@ -17,8 +17,8 @@ def submit_to_indexnow(package_names: list[str]) -> None:
 
     urls = [f"{SITE_URL}/package/{name}" for name in package_names]
 
-    for start in range(0, len(urls), 10_000):
-        batch = urls[start : start + 10_000]
+    for start in range(0, len(urls), 100):
+        batch = urls[start : start + 100]
 
         try:
             response = httpx.post(

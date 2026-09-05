@@ -93,6 +93,34 @@ For local frontend development with hot-reload, see the [Local Frontend Developm
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for full development setup and contribution guidelines.
 
 
+## Environment Configuration
+
+PyPiMap uses environment variables for database, API, frontend, pipeline, and
+external service configuration.
+
+For local development, copy the example environment file and adjust the values
+as needed:
+
+```bash
+  cp .env.example .env
+```
+
+The `.env.example` file documents the available configuration variables,
+including:
+
+- PostgreSQL connection and credential settings
+- Backend and frontend ports
+- Allowed CORS origins
+- Frontend API URL
+- Google Cloud credentials for BigQuery access
+- IndexNow configuration
+- GitHub App credentials used by the ETL pipeline
+
+Some settings are only required when running specific parts of the pipeline
+or connecting to external services. For a basic local application setup, use
+the local PostgreSQL and API/frontend defaults provided in `.env.example`.
+
+
 ## Project Structure
 
 ```text

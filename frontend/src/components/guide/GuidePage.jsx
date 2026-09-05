@@ -9,7 +9,7 @@ function GuidePage() {
     if (metaDesc) {
       metaDesc.setAttribute(
         "content",
-        "Learn how to use PyPiMap | reading the dependency graph, interactions, API reference, and more.",
+        "Learn how to use PyPiMap | explore Python package dependencies, read the dependency graph, and understand package relationships.",
       );
     }
     return () => {
@@ -31,10 +31,10 @@ function GuidePage() {
           </h2>
           <p className="text-slate-300 leading-relaxed">
             PyPiMap is an interactive visualization of the Python package
-            dependency ecosystem on PyPI. Search any package to see its full
-            dependency network rendered as a live, explorable graph — what it
-            depends on (downstream) and what depends on it (upstream) — backed
-            by data refreshed daily.
+            ecosystem on PyPI. Search for a package to explore its dependency
+            network, understand its upstream and downstream relationships, and
+            see package information and ecosystem metrics in an interactive
+            graph.
           </p>
         </section>
 
@@ -49,20 +49,55 @@ function GuidePage() {
 
         <section>
           <h2 className="text-xl font-semibold text-white mb-2">
+            Exploring a Package
+          </h2>
+          <p className="text-slate-300 leading-relaxed mb-3">
+            Start by searching for any package available on PyPI. Once a
+            package is selected, it becomes the focused package and its
+            dependency network is displayed around it.
+          </p>
+           <ul className="list-disc list-inside text-slate-300 space-y-1">
+             <li>
+              Search by package name to find the package you want to explore.
+             </li>
+             <li>
+              The focused package becomes the center of the graph.
+             </li>
+             <li>
+              Explore packages further upstream or downstream by interacting
+              with the graph.
+             </li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-2">
+            Package Information
+          </h2>
+          <p className="text-slate-300 leading-relaxed">
+            When a package is selected, PyPiMap displays information associated
+            with that package alongside its dependency network. This provides
+            context for the package while you explore its relationships within
+            the Python ecosystem.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-2">
             How to Read the Graph
           </h2>
           <ul className="list-disc list-inside text-slate-300 space-y-1">
             <li>
-              <strong className="text-white">Root node</strong> (white, center)
-              - the package you're currently viewing.
+              <strong className="text-white">Focused package</strong> (white,
+              center) - the package you're currently viewing.
             </li>
             <li>
-              <strong className="text-white">Parent nodes</strong> (blue,
-              upstream) - packages that depend on the root.
+              <strong className="text-white">Upstream nodes</strong> (blue) -
+              packages that depend on the focused package.
             </li>
             <li>
-              <strong className="text-white">Child nodes</strong> (orange,
-              downstream) - packages the root depends on.
+              <strong className="text-white">Downstream nodes</strong> (orange)
+              - packages the focused package depends on.
             </li>
             <li>
               <strong className="text-white">Solid lines</strong> - core
@@ -85,6 +120,18 @@ function GuidePage() {
 
         <section>
           <h2 className="text-xl font-semibold text-white mb-2">
+            Core vs Non-Core Dependencies
+          </h2>
+          <p className="text-slate-300 leading-relaxed">
+            PyPiMap distinguishes between core and non-core dependency
+            relationships. Core dependencies are required by a package, while
+            non-core dependencies are optional relationships such as extras or
+            development dependencies.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-2">
             Interactions
           </h2>
           <table className="w-full text-sm text-left text-slate-300 border border-slate-700 rounded-lg overflow-hidden">
@@ -92,11 +139,11 @@ function GuidePage() {
               {[
                 [
                   "Single-click a node",
-                  "Expand it - reveals more of its own upstream or downstream chain",
+                  "Expand it - reveals more of its upstream or downstream chain",
                 ],
                 [
                   "Double-click a node",
-                  "Recenter - makes that package the new root",
+                  "Open that package's own page",
                 ],
                 [
                   "Click a cluster bubble",
@@ -128,13 +175,13 @@ function GuidePage() {
           <ul className="list-disc list-inside text-slate-300 space-y-1">
             <li>
               <strong className="text-white">
-                Core dependents/dependencies
+                Core upstream/downstream relationships
               </strong>{" "}
               - required relationships.
             </li>
             <li>
               <strong className="text-white">
-                Non-core dependents/dependencies
+                Non-core upstream/downstream relationships
               </strong>{" "}
               - optional relationships (extras, dev deps).
             </li>
@@ -188,11 +235,12 @@ function GuidePage() {
 
         <section>
           <h2 className="text-xl font-semibold text-white mb-2">
-            API Reference
+            Developer / API
           </h2>
           <p className="text-slate-400 text-sm mt-1">
-            Full interactive API documentation (try-it-yourself included) is
-            available at{" "}
+            PyPiMap provides an interactive API for developers who want to
+            access package and graph data directly. Full API documentation,
+            including an interactive interface, is available at{" "}
             <a
               href="https://api.pypimap.com/docs"
               target="_blank"

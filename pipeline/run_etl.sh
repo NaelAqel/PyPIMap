@@ -2,7 +2,7 @@
 
 set -e
 
-cd /app/prod
+cd /app/etl
 source .env
 
 echo "Getting GitHub installation token..."
@@ -11,8 +11,7 @@ TOKEN=$(python3 pipeline/github_app_token.py)
 
 echo "Configuring Git authentication..."
 
-git remote set-url origin \
-    "https://x-access-token:${TOKEN}@github.com/NaelAqel/PyPIMap.git"
+git remote set-url origin "https://x-access-token:${TOKEN}@github.com/NaelAqel/PyPIMap.git"
 
 echo "Pulling latest daily_parquet_after_etl..."
 
@@ -34,8 +33,7 @@ fi
 
 echo "Committing..."
 
-git commit \
-    -m "data: $(date +%Y-%m-%d)"
+git commit -m "data: $(date +%Y-%m-%d)"
 
 echo "Pushing daily_parquet_after_etl..."
 

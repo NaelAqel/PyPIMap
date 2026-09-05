@@ -7,7 +7,7 @@ source .env
 
 echo "Getting GitHub installation token..."
 
-TOKEN=$(python pipeline/github_app_token.py)
+TOKEN=$(python3 pipeline/github_app_token.py)
 
 echo "Configuring Git authentication..."
 

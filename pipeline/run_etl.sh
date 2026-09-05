@@ -14,10 +14,6 @@ echo "Configuring Git authentication..."
 git remote set-url origin \
     "https://x-access-token:${TOKEN}@github.com/NaelAqel/PyPIMap.git"
 
-echo "Switching to daily_parquet_after_etl..."
-
-git checkout daily_parquet_after_etl
-
 echo "Pulling latest daily_parquet_after_etl..."
 
 git pull --ff-only origin daily_parquet_after_etl

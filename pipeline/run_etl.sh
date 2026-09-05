@@ -1,4 +1,3 @@
-```bash
 #!/bin/bash
 set -e
 
@@ -35,4 +34,4 @@ echo "Pushing daily_parquet_after_etl..."
 git push origin daily_parquet_after_etl
 
 echo "ETL completed successfully."
-```
+

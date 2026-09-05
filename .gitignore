@@ -5,6 +5,7 @@
 !package.json 
 !package-lock.json 
 production_secrets/
+*.pem
 
 # Python caching
 __pycache__/
@@ -13,6 +14,7 @@ __pycache__/
 .venv/
 venv/
 ENV/
+.ruff_cache
 
 # Node / React building
 node_modules/

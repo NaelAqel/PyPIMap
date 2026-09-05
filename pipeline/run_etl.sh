@@ -17,10 +17,10 @@ git remote set-url origin "https://x-access-token:${TOKEN}@github.com/NaelAqel/P
 git pull --ff-only origin daily_parquet_after_etl
 
 echo "Copying new raw data..."
-cp -a /app/prod/pipeline/staging/. /app/etl/pipeline/staging/
+cp -a /app/prod/pipeline/staging/raw_data/. /app/etl/pipeline/staging/raw_data/
 
 echo "Checking for changes..."
-git add pipeline/staging/
+git add pipeline/staging/raw_data/
 
 if git diff --cached --quiet; then
     echo "No new data."

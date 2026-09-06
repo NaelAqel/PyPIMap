@@ -709,7 +709,7 @@ def get_sitemap_chunk(chunk_num: int):
             f"  <url>\n"
             f"    <loc>https://pypimap.com/package/{pkg}</loc>\n"
             f"    <changefreq>daily</changefreq>\n"
-            f"    <lastmod>{last_mod.isoformat()}Z</lastmod>\n"
+            f"    <lastmod>{last_mod.isoformat()}</lastmod>\n"
             f"    <priority>0.8</priority>\n"
             f"  </url>"
             for pkg, last_mod in packages

@@ -70,6 +70,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-pg_db}
       POSTGRES_USER: ${POSTGRES_USER_READ:-user_read}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD_READ:-user_read_password}
+      POSTGRES_POOL_MIN_SIZE: ${POSTGRES_POOL_MIN_SIZE:-1}
+      POSTGRES_POOL_MAX_SIZE: ${POSTGRES_POOL_MAX_SIZE:-10}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
     ports:
       - target: 8000
@@ -101,7 +103,7 @@ services:
     networks:
       - app_network
 
-  # 5. Caddy Reverse Proxy — routes pypimap.com/api.pypimap.com traffic to frontend/backend, with automatic HTTPS  
+  # 5. Caddy Reverse Proxy — routes pypimap.com/api.pypimap.com traffic to frontend/backend, with automatic HTTPS
   caddy:
     image: caddy:alpine
     container_name: caddy_proxy
@@ -144,7 +146,7 @@ services:
     networks:
       - app_network
     profiles:
-      # Using a profile keeps this service hidden during standard 'docker compose up' 
+      # Using a profile keeps this service hidden during standard 'docker compose up'
       # You or your production cron job run it manually using: docker compose run pipeline
       - cron
 

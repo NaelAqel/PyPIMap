@@ -1,4 +1,4 @@
 fastapi
 uvicorn
-psycopg[binary]
+psycopg[binary,pool]
 slowapi

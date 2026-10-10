@@ -1,0 +1,4 @@
+# ripwire field notes v1 — one per line: <canonical-id or path> <TAB> <ISO-date> <TAB> <text> [<TAB> <HEAD sha> <TAB> <branch>]. Kept SORTED (merge-friendly union); dates are git committer-clock, not wall time; the trailing sha/branch pair is present only on provenance-stamped notes.
+get_graph_parents	2026-09-05	Parent means packages that depend on the focused package, not packages the focused package depends on.	807764449e9ed1d38bd115dd412426b0eaaaa0db	main
+pipeline/etl.py	2026-09-05	Keep expensive collection, normalization, and graph compilation in the ETL because both the production app and the public analytics/ML dataset consume its precomputed outputs.	807764449e9ed1d38bd115dd412426b0eaaaa0db	main
+useGraphData	2026-09-05	Initial graph requests include non-core relationships; the UI toggle filters them client-side.	807764449e9ed1d38bd115dd412426b0eaaaa0db	main

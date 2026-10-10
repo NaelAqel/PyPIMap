@@ -2,7 +2,6 @@ import os
 import re
 from html import escape
 
-from psycopg_pool import ConnectionPool
 from fastapi import FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import (
@@ -12,6 +11,7 @@ from fastapi.responses import (
     RedirectResponse,
 )
 from fastapi.staticfiles import StaticFiles
+from psycopg_pool import ConnectionPool
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -637,6 +637,7 @@ def get_llms_txt():
         "## Data\n\n"
         "Dependency data is refreshed daily via an automated pipeline. A downloadable dataset is "
         "also available on [Kaggle](https://www.kaggle.com/datasets/naelaqel/pypi-daily-metadata-and-analytics-base-dataset/data).\n"
+        "with DOI [10.34740/kaggle/ds/10945692](https://doi.org/10.34740/kaggle/ds/10945692).\n"
     )
     return Response(content=markdown, media_type="text/markdown")
 

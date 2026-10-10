@@ -212,6 +212,15 @@ function GuidePage() {
             >
               Kaggle dataset
             </a>
+            . Cite the dataset using its{" "}
+            <a
+              href="https://doi.org/10.34740/kaggle/ds/10945692"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sky-400 underline"
+            >
+              DOI (10.34740/kaggle/ds/10945692)
+            </a>
             .
           </p>
         </section>

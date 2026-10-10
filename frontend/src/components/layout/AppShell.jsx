@@ -89,6 +89,14 @@ function AppShell() {
           >
             Guide
           </a>
+          <a
+            href="https://doi.org/10.34740/kaggle/ds/10945692"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs font-medium bg-sky-600 hover:bg-sky-500 text-white px-2 py-1 rounded-md ml-3 mt-2 transition-colors ring-2 ring-sky-400/60"
+          >
+            Dataset DOI
+          </a>
           <p className="text-[10px] text-slate-500 mt-2">
             Last record at: {lastUpdateDate || "—"} UTC
           </p>
@@ -157,6 +165,15 @@ function AppShell() {
             className="underline hover:text-slate-200 transition-colors"
           >
             PyPI Stats
+          </a>
+          {" | "}
+          <a
+            href="https://doi.org/10.34740/kaggle/ds/10945692"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-slate-200 transition-colors"
+          >
+            Dataset DOI
           </a>
         </p>
       </div>

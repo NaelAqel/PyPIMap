@@ -78,7 +78,36 @@ PyPiMap is built on top of:
 - [PyPI](https://pypi.org) using PyPI Simple API for validating active packages.
 
 > **Note:** Data stored in this repository may not represent the latest daily dataset. The [`daily_parquet_after_etl`](https://github.com/NaelAqel/PyPIMap/tree/daily_parquet_after_etl) branch contains the latest ETL-generated Parquet files. The [PyPiMap Kaggle dataset](https://www.kaggle.com/datasets/naelaqel/pypi-daily-metadata-and-analytics-base-dataset/data) is generated daily from these files and provides both the full raw data and processed datasets for analysis and graph/ML use cases.
+>
+> **Dataset DOI:** [10.34740/kaggle/ds/10945692](https://doi.org/10.34740/kaggle/ds/10945692). Use this DOI when citing the dataset in academic work.
 
+### Downloadable PostgreSQL Database
+
+The latest PostgreSQL database dump is available on the [`daily_parquet_after_etl` branch](https://github.com/NaelAqel/PyPIMap/tree/daily_parquet_after_etl), at [`pipeline/staging/pypimap_db.dump`](https://github.com/NaelAqel/PyPIMap/blob/daily_parquet_after_etl/pipeline/staging/pypimap_db.dump).
+
+The dump uses PostgreSQL custom format. To restore it, install PostgreSQL client tools and have a running PostgreSQL server.
+
+Create an empty database:
+
+```bash
+createdb -U postgres pypimap
+```
+
+Restore the downloaded dump:
+
+```bash
+pg_restore -U postgres -d pypimap --no-owner --no-acl pypimap_db.dump
+```
+
+Connect and query the restored database:
+
+```bash
+psql -U postgres -d pypimap
+```
+
+The commands above assume a local PostgreSQL server and a user named `postgres`; adjust the connection options for your setup. The dump contains database schema and data, not PostgreSQL server configuration or roles.
+
+---
 ## Getting Started
 
 ```bash

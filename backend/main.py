@@ -2,7 +2,6 @@ import os
 import re
 from html import escape
 
-import psycopg
 from fastapi import FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import (
@@ -12,6 +11,7 @@ from fastapi.responses import (
     RedirectResponse,
 )
 from fastapi.staticfiles import StaticFiles
+from psycopg_pool import ConnectionPool
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -67,10 +67,27 @@ sslmode = os.environ.get("POSTGRES_SSLMODE", "prefer")
 
 DATABASE_URL = f"postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_name}?sslmode={sslmode}"
 
+pool = ConnectionPool(
+    DATABASE_URL,
+    min_size=int(os.environ.get("POSTGRES_POOL_MIN_SIZE", "1")),
+    max_size=int(os.environ.get("POSTGRES_POOL_MAX_SIZE", "10")),
+    open=False,
+)
+
+
+@app.on_event("startup")
+def open_database_pool():
+    pool.open(wait=True)
+
+
+@app.on_event("shutdown")
+def close_database_pool():
+    pool.close()
+
 
 @app.get("/")
 def redirect_to_random_package():
-    with psycopg.connect(DATABASE_URL) as conn, conn.cursor() as cur:
+    with pool.connection() as conn, conn.cursor() as cur:
         cur.execute(
             """
                 select normalized_name from pypi.metadata
@@ -88,7 +105,7 @@ def redirect_to_random_package():
 
 @app.get("/last_update")
 def get_meta():
-    with psycopg.connect(DATABASE_URL) as conn, conn.cursor() as cur:
+    with pool.connection() as conn, conn.cursor() as cur:
         cur.execute("select max(last_upload_date) from pypi.metadata;")
         result = cur.fetchone()
     return {"last_updated_date": result[0]}
@@ -107,14 +124,14 @@ def search_packages(
     if not q:
         raise HTTPException(status_code=400, detail="query to search `q` is required")
 
-    sql = """select normalized_name, package_name, author 
+    sql = """select normalized_name, package_name, author
              from pypi.metadata
-             where (package_name ilike %s or (author ilike %s and author != 'Your Name')) 
+             where (package_name ilike %s or (author ilike %s and author != 'Your Name'))
                 and is_active_package
              order by package_name = %s desc, importance_score desc
              limit %s;"""
 
-    with psycopg.connect(DATABASE_URL) as conn, conn.cursor() as cur:
+    with pool.connection() as conn, conn.cursor() as cur:
         cur.execute(sql, (f"%{q}%", f"%{q}%", f"{q}", limit))
         rows = cur.fetchall()
 
@@ -123,10 +140,10 @@ def search_packages(
 
 @app.get("/package/{name}", response_class=HTMLResponse)
 def get_package_page(name: str):
-    with psycopg.connect(DATABASE_URL) as conn, conn.cursor() as cur:
+    with pool.connection() as conn, conn.cursor() as cur:
         cur.execute(
             """
-            select normalized_name, seo_header 
+            select normalized_name, seo_header
             from pypi.seo_cache
             where normalized_name = %s and is_active_package
         """,
@@ -167,14 +184,14 @@ def get_package_page(name: str):
 @app.get("/package/api/{name}")
 @limiter.limit("60/minute")
 def get_package_api(request: Request, name: str):
-    with psycopg.connect(DATABASE_URL) as conn, conn.cursor() as cur:
+    with pool.connection() as conn, conn.cursor() as cur:
         cur.execute(
             """
-            select 
+            select
                 m.normalized_name
                 ,m.package_name
-                ,coalesce(m.author, 'Not Available')         author  
-                ,coalesce(m.home_page, 'Not Available')      home_page     
+                ,coalesce(m.author, 'Not Available')         author
+                ,coalesce(m.home_page, 'Not Available')      home_page
                 ,m.first_upload_date
                 ,m.last_upload_date
                 ,m.last_version
@@ -222,7 +239,7 @@ def get_graph_parents(
     node_cap: int = Query(150, ge=10, le=500),
     show_non_core: bool = True,
 ):
-    with psycopg.connect(DATABASE_URL) as conn, conn.cursor() as cur:
+    with pool.connection() as conn, conn.cursor() as cur:
         # init values
         req_level, is_cluster_request = None, False
 
@@ -406,7 +423,7 @@ def get_graph_children(
     node_cap: int = Query(150, ge=10, le=500),
     show_non_core: bool = True,
 ):
-    with psycopg.connect(DATABASE_URL) as conn, conn.cursor() as cur:
+    with pool.connection() as conn, conn.cursor() as cur:
         # init values
         req_level, is_cluster_request = None, False
 
@@ -620,13 +637,14 @@ def get_llms_txt():
         "## Data\n\n"
         "Dependency data is refreshed daily via an automated pipeline. A downloadable dataset is "
         "also available on [Kaggle](https://www.kaggle.com/datasets/naelaqel/pypi-daily-metadata-and-analytics-base-dataset/data).\n"
+        "with DOI [10.34740/kaggle/ds/10945692](https://doi.org/10.34740/kaggle/ds/10945692).\n"
     )
     return Response(content=markdown, media_type="text/markdown")
 
 
 @app.get("/sitemap.xml", response_class=Response)
 def get_sitemap_index():
-    with psycopg.connect(DATABASE_URL) as conn, conn.cursor() as cur:
+    with pool.connection() as conn, conn.cursor() as cur:
         cur.execute("select count(*) from pypi.metadata where is_active_package;")
         total = cur.fetchone()[0]
     num_chunks = (total // SITEMAP_CHUNK_SIZE) + (
@@ -686,11 +704,11 @@ def get_sitemap_chunk(chunk_num: int):
         raise HTTPException(status_code=404, detail="Invalid sitemap chunk")
     offset = (chunk_num - 1) * SITEMAP_CHUNK_SIZE
 
-    with psycopg.connect(DATABASE_URL) as conn, conn.cursor() as cur:
+    with pool.connection() as conn, conn.cursor() as cur:
         cur.execute(
             """
-            select 
-                normalized_name, 
+            select
+                normalized_name,
                 updated_at
             from pypi.metadata
             where is_active_package
@@ -709,7 +727,7 @@ def get_sitemap_chunk(chunk_num: int):
             f"  <url>\n"
             f"    <loc>https://pypimap.com/package/{pkg}</loc>\n"
             f"    <changefreq>daily</changefreq>\n"
-            f"    <lastmod>{last_mod.isoformat()}Z</lastmod>\n"
+            f"    <lastmod>{last_mod.isoformat()}</lastmod>\n"
             f"    <priority>0.8</priority>\n"
             f"  </url>"
             for pkg, last_mod in packages

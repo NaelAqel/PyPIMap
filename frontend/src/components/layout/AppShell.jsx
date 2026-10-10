@@ -166,6 +166,15 @@ function AppShell() {
           >
             PyPI Stats
           </a>
+          {" | "}
+          <a
+            href="https://doi.org/10.34740/kaggle/ds/10945692"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-slate-200 transition-colors"
+          >
+            Dataset DOI
+          </a>
         </p>
       </div>
     </div>

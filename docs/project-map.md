@@ -67,7 +67,8 @@ The upstream PyPIMap ETL performs the expensive collection and preprocessing: Bi
 The snapshot is designed to avoid repeated structural joins and graph-compilation work. In addition to package metadata and lifecycle fields, it includes:
 
 - Stable package IDs and normalized names.
-- Release counts and first/last upload timestamps.
+- Release counts and first/last upload timestamps (`last_upload_date` = latest upload by time).
+- Active / displayed version (`last_version`) selected by [PEP 440](https://peps.python.org/pep-0440/) ordering, preferring a final release when any exist (not by upload date). See README “Active version and upload dates”.
 - Active-package status.
 - `importance_score`, defined as core children plus `0.3 ×` non-core children.
 - Core/non-core parent and child counts.
@@ -139,7 +140,7 @@ The PostgreSQL model is created through `pipeline/sql/pg_create_tables.sql` and 
 |---|---|
 | `pypi.indecies` | Stable numeric identity for normalized package names |
 | `pypi.metadata_cdc` | Historical package metadata states |
-| `pypi.metadata` | Current package metadata and ecosystem metrics |
+| `pypi.metadata` | Current package metadata and ecosystem metrics (`last_version` via PEP 440; `last_upload_date` via max upload time) |
 | `pypi.package_connections` | Precomputed core/non-core parent and child IDs and counts |
 | `pypi.seo_cache` | Package-specific SEO headers and active status |
 

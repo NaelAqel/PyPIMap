@@ -189,6 +189,25 @@ function GuidePage() {
               <strong className="text-white">Importance score</strong> -
               relative centrality within the ecosystem.
             </li>
+            <li>
+              <strong className="text-white">Last version</strong> - the
+              package&apos;s active version under{" "}
+              <a
+                href="https://peps.python.org/pep-0440/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sky-400 underline"
+              >
+                PEP 440
+              </a>
+              , preferring a final release when one exists (same idea as the
+              PyPI project page), not the most recently uploaded tag.
+            </li>
+            <li>
+              <strong className="text-white">Last upload date</strong> - the
+              most recent upload time for any release of that package, which
+              can differ from the last version&apos;s upload date.
+            </li>
           </ul>
         </section>
 

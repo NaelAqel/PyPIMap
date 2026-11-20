@@ -70,6 +70,28 @@ The [PyPiMap Kaggle dataset](https://www.kaggle.com/datasets/naelaqel/pypi-daily
 
 The generated data may be periodically promoted into the application as part of the normal development/release process.
 
+### Active version and upload dates
+
+When the ETL builds each package’s current row in `pypi.metadata`, two fields are chosen independently:
+
+| Field | Meaning | How it is chosen |
+|---|---|---|
+| `last_version` | Active / displayed version (aligned with the PyPI project page) | Highest version under [PEP 440](https://peps.python.org/pep-0440/), preferring a **final** release when any exist |
+| `last_upload_date` | Most recent upload activity | `max(upload_date)` across all releases of that package |
+| `first_upload_date` | First seen upload | `min(upload_date)` |
+
+**`last_version` sort key** (applied in `pipeline/sql/duckdb_to_pg.sql` and `duckdb_to_pg_migration.sql`):
+
+1. Prefer a **non-prerelease, non-dev** version if the package has one (same idea as PyPI’s project-page “latest”; see [PEP 440 final releases](https://peps.python.org/pep-0440/#final-releases) vs [pre-releases](https://peps.python.org/pep-0440/#pre-releases) / [developmental releases](https://peps.python.org/pep-0440/#developmental-releases)).
+2. Higher **epoch** wins (`N!…`; [PEP 440 version epochs](https://peps.python.org/pep-0440/#version-epochs)).
+3. Higher **release** segment wins as integer parts (`1.10` > `1.9`; [PEP 440 release segment](https://peps.python.org/pep-0440/#release-segment)).
+4. Among pre-releases: no pre > `rc` > `b` > `a`, then higher pre number ([PEP 440 pre-release separators](https://peps.python.org/pep-0440/#pre-release-separators)).
+5. A **post** release sorts after the same version without post ([PEP 440 post-releases](https://peps.python.org/pep-0440/#post-releases)).
+6. A version **without** `.dev` sorts after one with `.dev` at the same base ([PEP 440 developmental releases](https://peps.python.org/pep-0440/#developmental-releases)).
+7. Tie-break only: newer `upload_date`, then `inserted_at`.
+
+So a newer-dated backport or `.dev` upload can update `last_upload_date` without changing `last_version`. Dependency edges for the package use `requires_dist` from the PEP 440–selected version.
+
 
 ## Data Sources & Attribution
 

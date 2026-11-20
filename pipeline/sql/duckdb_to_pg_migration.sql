@@ -11,6 +11,7 @@ group by normalized_name
 order by min(upload_date);
 
 
+-- last_version: PEP 440 active version (prefer final, then highest). last_upload_date: max upload_date
 create temp table last_records as
 select  
     id
@@ -22,11 +23,58 @@ select
     ,version                                                        last_version
     ,count(distinct version) over(partition by normalized_name)     releases_count
     ,min(upload_date) over(partition by normalized_name)            first_upload_date
-    ,upload_date                                                    last_upload_date
+    ,max(upload_date) over(partition by normalized_name)            last_upload_date
     ,is_active_package
 from '{cwd}/pipeline/staging/raw_data/**/*.parquet' q
 join pypi.indecies_stage using(normalized_name) 
-qualify row_number() over(partition by normalized_name order by upload_date desc, q.inserted_at desc) = 1;
+qualify row_number() over (
+    partition by normalized_name
+    order by
+        -- prefer final over pre/dev (PyPI project-page rule)
+        case
+            when regexp_matches(lower(version), '(?:^|[.\-_]|[0-9])(a|b|rc|alpha|beta|c|pre|preview)[0-9]*')
+              or regexp_matches(lower(version), '(?:^|[.\-_])dev')
+            then 1 else 0
+        end asc,
+        -- epoch (PEP 440)
+        coalesce(try_cast(regexp_extract(lower(version), '^([0-9]+)!', 1) as int), 0) desc,
+        -- release segment
+        coalesce(try_cast(split_part(regexp_extract(lower(version),
+            '^(?:[0-9]+!)?([0-9]+(?:\.[0-9]+)*)', 1), '.', 1) as int), 0) desc,
+        coalesce(try_cast(split_part(regexp_extract(lower(version),
+            '^(?:[0-9]+!)?([0-9]+(?:\.[0-9]+)*)', 1), '.', 2) as int), 0) desc,
+        coalesce(try_cast(split_part(regexp_extract(lower(version),
+            '^(?:[0-9]+!)?([0-9]+(?:\.[0-9]+)*)', 1), '.', 3) as int), 0) desc,
+        coalesce(try_cast(split_part(regexp_extract(lower(version),
+            '^(?:[0-9]+!)?([0-9]+(?:\.[0-9]+)*)', 1), '.', 4) as int), 0) desc,
+        coalesce(try_cast(split_part(regexp_extract(lower(version),
+            '^(?:[0-9]+!)?([0-9]+(?:\.[0-9]+)*)', 1), '.', 5) as int), 0) desc,
+        coalesce(try_cast(split_part(regexp_extract(lower(version),
+            '^(?:[0-9]+!)?([0-9]+(?:\.[0-9]+)*)', 1), '.', 6) as int), 0) desc,
+        coalesce(try_cast(split_part(regexp_extract(lower(version),
+            '^(?:[0-9]+!)?([0-9]+(?:\.[0-9]+)*)', 1), '.', 7) as int), 0) desc,
+        coalesce(try_cast(split_part(regexp_extract(lower(version),
+            '^(?:[0-9]+!)?([0-9]+(?:\.[0-9]+)*)', 1), '.', 8) as int), 0) desc,
+        -- pre: none > rc > b > a
+        case
+            when regexp_matches(lower(version), '(?:^|[.\-_]|[0-9])(rc|c|pre|preview)[0-9]*') then 3
+            when regexp_matches(lower(version), '(?:^|[.\-_]|[0-9])(b|beta)[0-9]*') then 2
+            when regexp_matches(lower(version), '(?:^|[.\-_]|[0-9])(a|alpha)[0-9]*') then 1
+            else 4
+        end desc,
+        coalesce(try_cast(regexp_extract(lower(version),
+            '(?:^|[.\-_]|[0-9])(?:a|b|rc|alpha|beta|c|pre|preview)\.?([0-9]+)', 1) as int), 0) desc,
+        -- post
+        case when regexp_matches(lower(version), '(?:^|[.\-_])post') then 1 else 0 end desc,
+        coalesce(try_cast(regexp_extract(lower(version),
+            '(?:^|[.\-_])post\.?([0-9]+)', 1) as int), 0) desc,
+        -- no-dev > dev
+        case when regexp_matches(lower(version), '(?:^|[.\-_])dev') then 0 else 1 end desc,
+        coalesce(try_cast(regexp_extract(lower(version),
+            '(?:^|[.\-_])dev\.?([0-9]+)', 1) as int), 0) desc,
+        upload_date desc,
+        q.inserted_at desc
+) = 1;
 
 
 create temp table dependencies as

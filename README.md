@@ -70,6 +70,28 @@ The [PyPiMap Kaggle dataset](https://www.kaggle.com/datasets/naelaqel/pypi-daily
 
 The generated data may be periodically promoted into the application as part of the normal development/release process.
 
+### Active version and upload dates
+
+When the ETL builds each package’s current row in `pypi.metadata`, two fields are chosen independently:
+
+| Field | Meaning | How it is chosen |
+|---|---|---|
+| `last_version` | Active / displayed version (aligned with the PyPI project page) | Highest version under [PEP 440](https://peps.python.org/pep-0440/), preferring a **final** release when any exist |
+| `last_upload_date` | Most recent upload activity | `max(upload_date)` across all releases of that package |
+| `first_upload_date` | First seen upload | `min(upload_date)` |
+
+**`last_version` sort key** (applied in `pipeline/sql/duckdb_to_pg.sql` and `duckdb_to_pg_migration.sql`):
+
+1. Prefer a **non-prerelease, non-dev** version if the package has one (same idea as PyPI’s project-page “latest”; see [PEP 440 final releases](https://peps.python.org/pep-0440/#final-releases) vs [pre-releases](https://peps.python.org/pep-0440/#pre-releases) / [developmental releases](https://peps.python.org/pep-0440/#developmental-releases)).
+2. Higher **epoch** wins (`N!…`; [PEP 440 version epochs](https://peps.python.org/pep-0440/#version-epochs)).
+3. Higher **release** segment wins as integer parts (`1.10` > `1.9`; [PEP 440 release segment](https://peps.python.org/pep-0440/#release-segment)).
+4. Among pre-releases: no pre > `rc` > `b` > `a`, then higher pre number ([PEP 440 pre-release separators](https://peps.python.org/pep-0440/#pre-release-separators)).
+5. A **post** release sorts after the same version without post ([PEP 440 post-releases](https://peps.python.org/pep-0440/#post-releases)).
+6. A version **without** `.dev` sorts after one with `.dev` at the same base ([PEP 440 developmental releases](https://peps.python.org/pep-0440/#developmental-releases)).
+7. Tie-break only: newer `upload_date`, then `inserted_at`.
+
+So a newer-dated backport or `.dev` upload can update `last_upload_date` without changing `last_version`. Dependency edges for the package use `requires_dist` from the PEP 440–selected version.
+
 
 ## Data Sources & Attribution
 
@@ -80,32 +102,6 @@ PyPiMap is built on top of:
 > **Note:** Data stored in this repository may not represent the latest daily dataset. The [`daily_parquet_after_etl`](https://github.com/NaelAqel/PyPIMap/tree/daily_parquet_after_etl) branch contains the latest ETL-generated Parquet files. The [PyPiMap Kaggle dataset](https://www.kaggle.com/datasets/naelaqel/pypi-daily-metadata-and-analytics-base-dataset/data) is generated daily from these files and provides both the full raw data and processed datasets for analysis and graph/ML use cases.
 >
 > **Dataset DOI:** [10.34740/kaggle/ds/10945692](https://doi.org/10.34740/kaggle/ds/10945692). Use this DOI when citing the dataset in academic work.
-
-### Downloadable PostgreSQL Database
-
-The latest PostgreSQL database dump is available on the [`daily_parquet_after_etl` branch](https://github.com/NaelAqel/PyPIMap/tree/daily_parquet_after_etl), at [`pipeline/staging/pypimap_db.dump`](https://github.com/NaelAqel/PyPIMap/blob/daily_parquet_after_etl/pipeline/staging/pypimap_db.dump).
-
-The dump uses PostgreSQL custom format. To restore it, install PostgreSQL client tools and have a running PostgreSQL server.
-
-Create an empty database:
-
-```bash
-createdb -U postgres pypimap
-```
-
-Restore the downloaded dump:
-
-```bash
-pg_restore -U postgres -d pypimap --no-owner --no-acl pypimap_db.dump
-```
-
-Connect and query the restored database:
-
-```bash
-psql -U postgres -d pypimap
-```
-
-The commands above assume a local PostgreSQL server and a user named `postgres`; adjust the connection options for your setup. The dump contains database schema and data, not PostgreSQL server configuration or roles.
 
 ---
 ## Getting Started

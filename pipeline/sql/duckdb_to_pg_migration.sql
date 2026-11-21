@@ -11,7 +11,7 @@ group by normalized_name
 order by min(upload_date);
 
 
--- last_version: PEP 440 active version (prefer final, then highest). last_upload_date: max upload_date
+-- active_version: PEP 440 active version (prefer final, then highest). last_upload_date: max upload_date
 create temp table last_records as
 select  
     id
@@ -20,7 +20,7 @@ select
     ,author
     ,home_page
     ,requires_dist
-    ,version                                                        last_version
+    ,version                                                        active_version
     ,count(distinct version) over(partition by normalized_name)     releases_count
     ,min(upload_date) over(partition by normalized_name)            first_upload_date
     ,max(upload_date) over(partition by normalized_name)            last_upload_date
@@ -87,9 +87,9 @@ with dependencies as (
     where is_active_package
 )
 select distinct 
-    child.id                                                child_id
-    ,parent.id                                              parent_id
-    ,child.extra_name is null or child.extra_name = ''      is_core_parent
+    child.id                                                dependent_id
+    ,parent.id                                              depends_on_id
+    ,child.extra_name is null or child.extra_name = ''      is_core_edge
 from dependencies child 
 left join pypi.indecies_stage parent
     on parent.normalized_name = lower(regexp_replace(child.dependency, '[-._]+', '-', 'g'))
@@ -140,17 +140,17 @@ order by upload_date, inserted_at;
 
 
 insert into pypi.metadata_stage (
-    id, package_name, normalized_name, author, home_page, last_version, 
+    id, package_name, normalized_name, author, home_page, active_version, 
     releases_count, first_upload_date, last_upload_date, is_active_package, 
     importance_score
 )
-with children_counts as (
+with used_by_counts as (
     select 
-        parent_id 
-        ,count(case when is_core_parent then 1 end)             children_core_counts
-        ,count(case when not is_core_parent then 1 end)         children_non_core_counts
+        depends_on_id 
+        ,count(case when is_core_edge then 1 end)             used_by_core_counts
+        ,count(case when not is_core_edge then 1 end)         used_by_optional_counts
     from dependencies
-    group by parent_id
+    group by depends_on_id
 )    
 select 
     lr.id
@@ -158,51 +158,51 @@ select
     ,normalized_name
     ,author
     ,home_page
-    ,last_version
+    ,active_version
     ,releases_count
     ,first_upload_date
     ,last_upload_date
     ,is_active_package
-    ,coalesce(children_core_counts, 0)+0.3*coalesce(children_non_core_counts, 0)    importance_score
-from last_records lr left join children_counts c on lr.id = c.parent_id;
+    ,coalesce(used_by_core_counts, 0)+0.3*coalesce(used_by_optional_counts, 0)    importance_score
+from last_records lr left join used_by_counts c on lr.id = c.depends_on_id;
 
 
 insert into pypi.package_connections_stage (
-    id, is_active_package, parent_core_counts, parent_non_core_counts,
-    children_core_counts, children_non_core_counts, parent_core_ids,
-    parent_non_core_ids, children_core_ids, children_non_core_ids
+    id, is_active_package, depends_on_core_counts, depends_on_optional_counts,
+    used_by_core_counts, used_by_optional_counts, depends_on_core_ids,
+    depends_on_optional_ids, used_by_core_ids, used_by_optional_ids
 )
-with parents as (
+with depends_on_agg as (
     select 
-        child_id id 
-        ,count(case when is_core_parent and parent_id is not null then 1 end)       parent_core_counts
-        ,count(case when not is_core_parent and parent_id is not null then 1 end)   parent_non_core_counts
-        ,array_agg(parent_id order by parent_id) 
-            filter (where is_core_parent and parent_id is not null)                 parent_core_ids
-        ,array_agg(parent_id order by parent_id) 
-            filter (where not is_core_parent and parent_id is not null)             parent_non_core_ids
+        dependent_id id 
+        ,count(case when is_core_edge and depends_on_id is not null then 1 end)       depends_on_core_counts
+        ,count(case when not is_core_edge and depends_on_id is not null then 1 end)   depends_on_optional_counts
+        ,array_agg(depends_on_id order by depends_on_id) 
+            filter (where is_core_edge and depends_on_id is not null)                 depends_on_core_ids
+        ,array_agg(depends_on_id order by depends_on_id) 
+            filter (where not is_core_edge and depends_on_id is not null)             depends_on_optional_ids
     from dependencies group by 1
 ), 
-children as (
+used_by_agg as (
     select 
-        parent_id 
-        ,count(case when is_core_parent then 1 end)                                 children_core_counts
-        ,count(case when not is_core_parent then 1 end)                             children_non_core_counts
-        ,array_agg(child_id order by child_id) filter (where is_core_parent)        children_core_ids
-        ,array_agg(child_id order by child_id) filter (where not is_core_parent)    children_non_core_ids
+        depends_on_id 
+        ,count(case when is_core_edge then 1 end)                                 used_by_core_counts
+        ,count(case when not is_core_edge then 1 end)                             used_by_optional_counts
+        ,array_agg(dependent_id order by dependent_id) filter (where is_core_edge)        used_by_core_ids
+        ,array_agg(dependent_id order by dependent_id) filter (where not is_core_edge)    used_by_optional_ids
     from dependencies group by 1
 )
 select 
     lr.id
     ,lr.is_active_package
-    ,coalesce(parent_core_counts, 0)                                                parent_core_counts
-    ,coalesce(parent_non_core_counts, 0)                                            parent_non_core_counts
-    ,coalesce(children_core_counts, 0)                                              children_core_counts
-    ,coalesce(children_non_core_counts, 0)                                          children_non_core_counts
-    ,coalesce(parent_core_ids, array[]::int[])                                      parent_core_ids
-    ,coalesce(parent_non_core_ids, array[]::int[])                                  parent_non_core_ids
-    ,coalesce(children_core_ids, array[]::int[])                                    children_core_ids
-    ,coalesce(children_non_core_ids, array[]::int[])                                children_non_core_ids
+    ,coalesce(depends_on_core_counts, 0)                                                depends_on_core_counts
+    ,coalesce(depends_on_optional_counts, 0)                                            depends_on_optional_counts
+    ,coalesce(used_by_core_counts, 0)                                              used_by_core_counts
+    ,coalesce(used_by_optional_counts, 0)                                          used_by_optional_counts
+    ,coalesce(depends_on_core_ids, array[]::int[])                                      depends_on_core_ids
+    ,coalesce(depends_on_optional_ids, array[]::int[])                                  depends_on_optional_ids
+    ,coalesce(used_by_core_ids, array[]::int[])                                    used_by_core_ids
+    ,coalesce(used_by_optional_ids, array[]::int[])                                used_by_optional_ids
 from last_records lr 
-left join parents p on lr.id = p.id 
-left join children c on lr.id = c.parent_id;
+left join depends_on_agg p on lr.id = p.id 
+left join used_by_agg c on lr.id = c.depends_on_id;

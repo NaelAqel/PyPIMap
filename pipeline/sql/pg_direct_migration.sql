@@ -2,10 +2,10 @@ insert into pypi.seo_cache_stage (normalized_name, seo_header, is_active_package
 with source as (
     select
         m.*
-        ,p.parent_core_counts
-        ,p.parent_non_core_counts
-        ,p.children_core_counts
-        ,p.children_non_core_counts
+        ,p.depends_on_core_counts
+        ,p.depends_on_optional_counts
+        ,p.used_by_core_counts
+        ,p.used_by_optional_counts
         ,case when char_length(m.package_name) > 22
             then left(m.package_name, 12) || '...' || right(m.package_name, 7)
             else m.package_name end                                                 title_name
@@ -27,7 +27,7 @@ prepared as (
             chr(34), chr(38)||chr(113)||chr(117)||chr(111)||chr(116)||chr(59)), chr(60), 
             chr(38)||chr(108)||chr(116)||chr(59)), chr(62), chr(38)||chr(103)||chr(116)||chr(59)), chr(39), 
             chr(38)||chr(35)||chr(51)||chr(57)||chr(59))        html_display_name,
-        replace(replace(replace(replace(replace(left(last_version, 8), chr(38), chr(38)||chr(97)||chr(109)||chr(112)||chr(59)),
+        replace(replace(replace(replace(replace(left(active_version, 8), chr(38), chr(38)||chr(97)||chr(109)||chr(112)||chr(59)),
             chr(34), chr(38)||chr(113)||chr(117)||chr(111)||chr(116)||chr(59)), chr(60), 
             chr(38)||chr(108)||chr(116)||chr(59)), chr(62), chr(38)||chr(103)||chr(116)||chr(59)), chr(39), 
             chr(38)||chr(35)||chr(51)||chr(57)||chr(59))        html_version
@@ -39,7 +39,7 @@ rendered as (
         is_active_package,
         concat(
             '<title>', html_title_name, ' v', html_version, ' Dependency Graph | PyPIMap</title>
-<meta name="description" content="Analyze ', html_display_name, ' (v', html_version, ') with ', releases_count::varchar, ' releases. Structural metrics: ', parent_core_counts::varchar, ' core dependents, ', children_core_counts::varchar, ' core dependencies. View full interactive network graph map." />
+<meta name="description" content="Analyze ', html_display_name, ' (v', html_version, ') with ', releases_count::varchar, ' releases. Structural metrics: ', depends_on_core_counts::varchar, ' core Depends on, ', used_by_core_counts::varchar, ' core Used by. View full interactive network graph map." />
 <link rel="canonical" href="https://pypimap.com/package/', normalized_name, '" />
 <meta property="og:type" content="website" />
 <meta property="og:title" content="', html_display_name, ' Ecosystem Map & Graph Analytics" />
@@ -123,8 +123,8 @@ gtag(''config'', ''G-R10LEPYJJE'')
                         'identifier', normalized_name,
                         'operatingSystem', 'Cross-platform',
                         'applicationCategory', 'DeveloperApplication',
-                        'softwareVersion', last_version,
-                        'description', concat('Analyze ', display_name, ' (v', left(last_version, 8), ') with ', releases_count, ' releases. Structural metrics: ', parent_core_counts, ' core dependents, ', children_core_counts, ' core dependencies.'),
+                        'softwareVersion', active_version,
+                        'description', concat('Analyze ', display_name, ' (v', left(active_version, 8), ') with ', releases_count, ' releases. Structural metrics: ', depends_on_core_counts, ' core Depends on, ', used_by_core_counts, ' core Used by.'),
                         'url', 'https://pypimap.com/package/' || normalized_name,
                         'downloadUrl', nullif(home_page, ''),
                         'dateCreated', to_char(first_upload_date, 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
@@ -138,10 +138,10 @@ gtag(''config'', ''G-R10LEPYJJE'')
                         'name', package_name || ' Interactivity Map & Analysis Page',
                         'mainEntity', jsonb_build_object('@id', 'https://pypimap.com/package/' || normalized_name || '#software'),
                         'about', jsonb_build_array(
-                            jsonb_build_object('@type', 'PropertyValue', 'name', 'Parent Core Counts', 'value', parent_core_counts::text),
-                            jsonb_build_object('@type', 'PropertyValue', 'name', 'Parent Non-Core Counts', 'value', parent_non_core_counts::text),
-                            jsonb_build_object('@type', 'PropertyValue', 'name', 'Children Core Counts', 'value', children_core_counts::text),
-                            jsonb_build_object('@type', 'PropertyValue', 'name', 'Children Non-Core Counts', 'value', children_non_core_counts::text),
+                            jsonb_build_object('@type', 'PropertyValue', 'name', 'Depends on Core Counts', 'value', depends_on_core_counts::text),
+                            jsonb_build_object('@type', 'PropertyValue', 'name', 'Depends on Optional Counts', 'value', depends_on_optional_counts::text),
+                            jsonb_build_object('@type', 'PropertyValue', 'name', 'Used by Core Counts', 'value', used_by_core_counts::text),
+                            jsonb_build_object('@type', 'PropertyValue', 'name', 'Used by Optional Counts', 'value', used_by_optional_counts::text),
                             jsonb_build_object('@type', 'PropertyValue', 'name', 'Total Historical Releases', 'value', releases_count::text)
                         )
                     ),
@@ -154,7 +154,7 @@ gtag(''config'', ''G-R10LEPYJJE'')
                                 'name', 'What are the dependencies of ' || package_name || '?',
                                 'acceptedAnswer', jsonb_build_object(
                                     '@type', 'Answer',
-                                    'text', concat(package_name, ' requires ', children_core_counts, ' core dependencies and ', children_non_core_counts, ' non-core dependencies to function correctly within software environments.')
+                                    'text', concat(package_name, ' requires ', used_by_core_counts, ' core dependencies and ', used_by_optional_counts, ' optional dependencies to function correctly within software environments.')
                                 )
                             ),
                             jsonb_build_object(
@@ -162,7 +162,7 @@ gtag(''config'', ''G-R10LEPYJJE'')
                                 'name', 'How many packages depend on ' || package_name || '?',
                                 'acceptedAnswer', jsonb_build_object(
                                     '@type', 'Answer',
-                                    'text', concat('There are ', parent_core_counts, ' core upstream packages and ', parent_non_core_counts, ' non-core packages that depend on ', package_name, ' within the PyPI package registry ecosystem.')
+                                    'text', concat('There are ', depends_on_core_counts, ' core upstream packages and ', depends_on_optional_counts, ' optional packages that depend on ', package_name, ' within the PyPI package registry ecosystem.')
                                 )
                             ),
                             jsonb_build_object(

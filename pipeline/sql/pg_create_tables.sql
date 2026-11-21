@@ -32,7 +32,7 @@ create table if not exists pypi.metadata_stage (
     ,normalized_name         text not null
     ,author                  text
     ,home_page               text
-    ,last_version            text not null
+    ,active_version            text not null
     ,releases_count          int not null default 0
     ,first_upload_date       timestamp not null
     ,last_upload_date        timestamp not null
@@ -48,14 +48,14 @@ drop table if exists pypi.package_connections_stage;
 create table if not exists pypi.package_connections_stage (
     id                        int primary key
     ,is_active_package        bool not null
-    ,parent_core_counts       int not null default 0
-    ,parent_non_core_counts   int not null default 0
-    ,children_core_counts     int not null default 0
-    ,children_non_core_counts int not null default 0
-    ,parent_core_ids          int[] default '{}'
-    ,parent_non_core_ids      int[] default '{}'
-    ,children_core_ids        int[] default '{}'
-    ,children_non_core_ids    int[] default '{}'
+    ,depends_on_core_counts       int not null default 0
+    ,depends_on_optional_counts   int not null default 0
+    ,used_by_core_counts     int not null default 0
+    ,used_by_optional_counts int not null default 0
+    ,depends_on_core_ids          int[] default '{}'
+    ,depends_on_optional_ids      int[] default '{}'
+    ,used_by_core_ids        int[] default '{}'
+    ,used_by_optional_ids    int[] default '{}'
     ,inserted_at              timestamptz not null default now()
     ,updated_at               timestamptz not null default now()
 );

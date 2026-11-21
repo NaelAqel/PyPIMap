@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import SearchBar from "../search/SearchBar";
 import Breadcrumbs from "../search/Breadcrumbs";
-import ShowNonCoreCheckbox from "../graph/ShowNonCoreCheckbox";
+import ShowOptionalCheckbox from "../graph/ShowOptionalCheckbox";
 import GlobalNotificationBanner from "../common/GlobalNotificationBanner";
 import { useAppStore } from "../../store/appStore";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
@@ -110,7 +110,7 @@ function AppShell() {
 
         <div className="border-t border-slate-700 pt-3 space-y-3">
           <div className="bg-slate-800/60 rounded-md p-2">
-            <ShowNonCoreCheckbox />
+            <ShowOptionalCheckbox />
           </div>
           <Breadcrumbs />
         </div>

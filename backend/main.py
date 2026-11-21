@@ -194,12 +194,12 @@ def get_package_api(request: Request, name: str):
                 ,coalesce(m.home_page, 'Not Available')      home_page
                 ,m.first_upload_date
                 ,m.last_upload_date
-                ,m.last_version
+                ,m.active_version
                 ,m.releases_count
-                ,p.parent_core_counts
-                ,p.parent_non_core_counts
-                ,p.children_core_counts
-                ,p.children_non_core_counts
+                ,p.depends_on_core_counts
+                ,p.depends_on_optional_counts
+                ,p.used_by_core_counts
+                ,p.used_by_optional_counts
                 ,m.importance_score
             from pypi.metadata m
             join pypi.package_connections p using(id)
@@ -219,25 +219,25 @@ def get_package_api(request: Request, name: str):
         "home_page": row[3],
         "first_upload_date": row[4],
         "last_upload_date": row[5],
-        "last_version": row[6],
+        "active_version": row[6],
         "releases_count": row[7],
-        "parent_core_counts": row[8],
-        "parent_non_core_counts": row[9],
-        "children_core_counts": row[10],
-        "children_non_core_counts": row[11],
+        "depends_on_core_counts": row[8],
+        "depends_on_optional_counts": row[9],
+        "used_by_core_counts": row[10],
+        "used_by_optional_counts": row[11],
         "importance_score": row[12],
     }
 
 
-@app.get("/graph/{name}/parents")
+@app.get("/graph/{name}/depends-on")
 @limiter.limit("30/minute")
-def get_graph_parents(
+def get_graph_depends_on(
     request: Request,
     name: str | None = None,
     depth: int = Query(2, ge=1, le=4),
     offset: int = 0,
     node_cap: int = Query(150, ge=10, le=500),
-    show_non_core: bool = True,
+    show_optional: bool = True,
 ):
     with pool.connection() as conn, conn.cursor() as cur:
         # init values
@@ -245,9 +245,9 @@ def get_graph_parents(
 
         if name.startswith("cluster_"):
             is_cluster_request = True
-            parts = name.split("_")  # ['cluster', 'p', 'numpy', '1']
-            if parts[1] != "p":
-                raise HTTPException(status_code=400, detail="Not a parent cluster")
+            parts = name.split("_")  # ['cluster', 'd'|'u', 'numpy', '1']
+            if parts[1] != "d":
+                raise HTTPException(status_code=400, detail="Not a depends-on cluster")
             root_normalized_name = parts[2]
             cur.execute(
                 "select id from pypi.metadata where normalized_name = %s and is_active_package",
@@ -294,7 +294,7 @@ def get_graph_parents(
 
             cur.execute(
                 """
-                select id, parent_core_ids, parent_non_core_ids
+                select id, depends_on_core_ids, depends_on_optional_ids
                 from pypi.package_connections where id = any(%s)
             """,
                 (frontier,),
@@ -316,16 +316,16 @@ def get_graph_parents(
 
             for row_id, p_core, p_non in rows:
                 row_name = id_to_name.get(row_id, str(row_id))
-                parent_ids = (p_core or []) + (p_non or [] if show_non_core else [])
+                depends_on_ids = (p_core or []) + (p_non or [] if show_optional else [])
 
-                core_parent_set = set(p_core or [])
+                core_depends_on_set = set(p_core or [])
 
-                # --- UPSTREAM TRUNCATION & AGGREGATOR ---
-                actual_parents = parent_ids[offset : offset + node_cap]
-                parent_cluster_count = max(0, len(parent_ids) - (offset + node_cap))
+                # --- DEPENDS-ON TRUNCATION & AGGREGATOR ---
+                actual_depends_on = depends_on_ids[offset : offset + node_cap]
+                depends_on_cluster_count = max(0, len(depends_on_ids) - (offset + node_cap))
 
                 # Separate counts so the frontend can display the right number
-                # depending on the show-non-core toggle, independent of what was fetched.
+                # depending on the show-optional toggle, independent of what was fetched.
                 core_only_ids = p_core or []
                 total_ids = (p_core or []) + (p_non or [])
                 remaining_core_count = max(0, len(core_only_ids) - (offset + node_cap))
@@ -334,40 +334,40 @@ def get_graph_parents(
                 if is_cluster_request and not (
                     level == req_level and row_id == seed_id[0]
                 ):
-                    actual_parents = []
+                    actual_depends_on = []
 
-                for pid in actual_parents:
-                    pid_name = id_to_name.get(pid, str(pid))
-                    if str(pid) not in nodes:
+                for dep_id in actual_depends_on:
+                    dep_name = id_to_name.get(dep_id, str(dep_id))
+                    if dep_name not in nodes:
                         if len(nodes) >= node_cap or len(edges) >= (node_cap * 2):
                             is_capped = True
                             continue
 
-                        nodes[pid_name] = {
-                            "id": pid_name,
-                            "direction": "parent",
+                        nodes[dep_name] = {
+                            "id": dep_name,
+                            "direction": "depends_on",
                             "level": level,
-                            "is_core": pid in core_parent_set,
+                            "is_core": dep_id in core_depends_on_set,
                             "is_cluster": False,
                         }
-                        next_frontier.append(pid)
+                        next_frontier.append(dep_id)
 
                     edges.append(
                         {
-                            "from": pid_name,
+                            "from": dep_name,
                             "to": row_name,
-                            "direction": "parent",
-                            "is_core": pid in core_parent_set,
+                            "direction": "depends_on",
+                            "is_core": dep_id in core_depends_on_set,
                         }
                     )
 
-                # Inject pseudo-node for truncated parents
-                if parent_cluster_count > 0:
-                    cluster_id = f"cluster_p_{row_name}_{level}"
+                # Inject pseudo-node for truncated depends-on
+                if depends_on_cluster_count > 0:
+                    cluster_id = f"cluster_d_{row_name}_{level}"
                     nodes[cluster_id] = {
                         "id": cluster_id,
-                        "package_name": [f"+ {parent_cluster_count} other packages"],
-                        "direction": "parent",
+                        "package_name": [f"+ {depends_on_cluster_count} other packages"],
+                        "direction": "depends_on",
                         "level": level,
                         "is_core": True,
                         "is_cluster": True,
@@ -379,7 +379,7 @@ def get_graph_parents(
                         {
                             "from": cluster_id,
                             "to": row_name,
-                            "direction": "parent",
+                            "direction": "depends_on",
                             "is_core": True,
                         }
                     )
@@ -413,15 +413,15 @@ def get_graph_parents(
     }
 
 
-@app.get("/graph/{name}/children")
+@app.get("/graph/{name}/used-by")
 @limiter.limit("30/minute")
-def get_graph_children(
+def get_graph_used_by(
     request: Request,
     name: str | None = None,
     depth: int = Query(2, ge=1, le=4),
     offset: int = 0,
     node_cap: int = Query(150, ge=10, le=500),
-    show_non_core: bool = True,
+    show_optional: bool = True,
 ):
     with pool.connection() as conn, conn.cursor() as cur:
         # init values
@@ -430,8 +430,8 @@ def get_graph_children(
         if name.startswith("cluster_"):
             is_cluster_request = True
             parts = name.split("_")  # ['cluster', 'c', 'numpy', '1']
-            if parts[1] != "c":
-                raise HTTPException(status_code=400, detail="Not a child cluster")
+            if parts[1] != "u":
+                raise HTTPException(status_code=400, detail="Not a used-by cluster")
             root_normalized_name = parts[2]
             cur.execute(
                 "select id from pypi.metadata where normalized_name = %s and is_active_package",
@@ -478,7 +478,7 @@ def get_graph_children(
 
             cur.execute(
                 """
-                select id, children_core_ids, children_non_core_ids
+                select id, used_by_core_ids, used_by_optional_ids
                 from pypi.package_connections where id = any(%s)
             """,
                 (frontier,),
@@ -500,17 +500,16 @@ def get_graph_children(
 
             for row_id, c_core, c_non in rows:
                 row_name = id_to_name.get(row_id, str(row_id))
-                child_ids = (c_core or []) + (c_non or [] if show_non_core else [])
+                used_by_ids = (c_core or []) + (c_non or [] if show_optional else [])
 
-                core_child_set = set(c_core or [])
+                core_used_by_set = set(c_core or [])
 
-                # --- DOWNSTREAM TRUNCATION & AGGREGATOR ---
-                # Your clean logic
-                actual_children = child_ids[offset : offset + node_cap]
-                child_cluster_count = max(0, len(child_ids) - (offset + node_cap))
+                # --- USED-BY TRUNCATION & AGGREGATOR ---
+                actual_used_by = used_by_ids[offset : offset + node_cap]
+                used_by_cluster_count = max(0, len(used_by_ids) - (offset + node_cap))
 
                 # Separate counts so the frontend can display the right number
-                # depending on the show-non-core toggle, independent of what was fetched.
+                # depending on the show-optional toggle, independent of what was fetched.
                 core_only_ids = c_core or []
                 total_ids = (c_core or []) + (c_non or [])
                 remaining_core_count = max(0, len(core_only_ids) - (offset + node_cap))
@@ -519,9 +518,9 @@ def get_graph_children(
                 if is_cluster_request and not (
                     level == req_level and row_id == seed_id[0]
                 ):
-                    actual_children = []
+                    actual_used_by = []
 
-                for cid in actual_children:
+                for cid in actual_used_by:
                     cid_name = id_to_name.get(cid, str(cid))
                     if cid_name not in nodes:
                         if len(nodes) >= node_cap or len(edges) >= (node_cap * 2):
@@ -530,9 +529,9 @@ def get_graph_children(
 
                         nodes[cid_name] = {
                             "id": cid_name,
-                            "direction": "child",
+                            "direction": "used_by",
                             "level": level,
-                            "is_core": cid in core_child_set,
+                            "is_core": cid in core_used_by_set,
                             "is_cluster": False,
                         }
                         next_frontier.append(cid)
@@ -541,18 +540,18 @@ def get_graph_children(
                         {
                             "from": row_name,
                             "to": cid_name,
-                            "direction": "child",
-                            "is_core": cid in core_child_set,
+                            "direction": "used_by",
+                            "is_core": cid in core_used_by_set,
                         }
                     )
 
-                # Inject pseudo-node for truncated children
-                if child_cluster_count > 0:
-                    cluster_id = f"cluster_c_{row_name}_{level}"
+                # Inject pseudo-node for truncated used-by
+                if used_by_cluster_count > 0:
+                    cluster_id = f"cluster_u_{row_name}_{level}"
                     nodes[cluster_id] = {
                         "id": cluster_id,
-                        "package_name": [f"+ {child_cluster_count} other packages"],
-                        "direction": "child",
+                        "package_name": [f"+ {used_by_cluster_count} other packages"],
+                        "direction": "used_by",
                         "level": level,
                         "is_core": True,
                         "is_cluster": True,
@@ -563,7 +562,7 @@ def get_graph_children(
                         {
                             "from": row_name,
                             "to": cluster_id,
-                            "direction": "child",
+                            "direction": "used_by",
                             "is_core": True,
                         }
                     )

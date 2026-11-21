@@ -307,6 +307,21 @@ function GuidePage() {
               ))}
             </tbody>
           </table>
+          <p className="text-slate-400 text-sm mt-3">
+            Optional{" "}
+            <a
+              href="https://github.com/naelaqel/pypimap/tree/main/mcp"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sky-400 underline"
+            >
+              MCP package
+            </a>{" "}
+            for local agents (Cursor / Claude Desktop): wraps the same API as
+            tools - search, package info, Depends on, Used by, and last update.
+            Install and config notes live in that folder&apos;s README; nothing
+            extra is required on the PyPIMap servers.
+          </p>
         </section>
 
         <p className="text-slate-500 text-sm pt-6 border-t border-slate-800">

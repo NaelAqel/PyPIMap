@@ -1,15 +1,15 @@
 import { useAppStore } from "../../store/appStore";
 
-function ShowNonCoreCheckbox() {
-  const showNonCore = useAppStore((state) => state.showNonCore);
-  const toggleShowNonCore = useAppStore((state) => state.toggleShowNonCore);
+function ShowOptionalCheckbox() {
+  const showOptional = useAppStore((state) => state.showOptional);
+  const toggleShowOptional = useAppStore((state) => state.toggleShowOptional);
 
   return (
     <label className="flex items-center gap-2 text-sm text-white cursor-pointer select-none">
       <input
         type="checkbox"
-        checked={showNonCore}
-        onChange={() => toggleShowNonCore()}
+        checked={showOptional}
+        onChange={() => toggleShowOptional()}
         className="w-4 h-4 accent-sky-500"
       />
       <span className="font-medium">Show optional dependencies</span>
@@ -17,4 +17,4 @@ function ShowNonCoreCheckbox() {
   );
 }
 
-export default ShowNonCoreCheckbox;
+export default ShowOptionalCheckbox;

@@ -63,16 +63,16 @@ function InfoLegendPanel() {
           </p>
 
           <div className="text-xs text-slate-400 space-y-0.5">
-            <div>Last version: {data.last_version}</div>
+            <div>Active version: {data.active_version}</div>
             <div>Releases: {data.releases_count}</div>
             <div>First upload: {formatDate(data.first_upload_date)} UTC</div>
             <div>Last upload: {formatDate(data.last_upload_date)} UTC</div>
           </div>
           <MetricsGrid
-            parent_core_counts={data.parent_core_counts ?? 0}
-            parent_non_core_counts={data.parent_non_core_counts ?? 0}
-            children_core_counts={data.children_core_counts ?? 0}
-            children_non_core_counts={data.children_non_core_counts ?? 0}
+            depends_on_core_counts={data.depends_on_core_counts ?? 0}
+            depends_on_optional_counts={data.depends_on_optional_counts ?? 0}
+            used_by_core_counts={data.used_by_core_counts ?? 0}
+            used_by_optional_counts={data.used_by_optional_counts ?? 0}
           />
         </>
       )}

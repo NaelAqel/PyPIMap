@@ -20,8 +20,8 @@ function getSubtreeIds(startId, links, allNodesById) {
   links.forEach((e) => {
     const s = edgeEndpointId(e.source);
     const t = edgeEndpointId(e.target);
-    const from = e.direction === "parent" ? t : s;
-    const to = e.direction === "parent" ? s : t;
+    const from = e.direction === "depends_on" ? t : s;
+    const to = e.direction === "depends_on" ? s : t;
     if (!outward[from]) outward[from] = [];
     outward[from].push(to);
   });
@@ -46,7 +46,7 @@ function GraphCanvas() {
   const setFocusedPackage = useAppStore((state) => state.setFocusedPackage);
   const addBreadcrumb = useAppStore((state) => state.addBreadcrumb);
   const focusedPackageId = useAppStore((state) => state.focusedPackageId);
-  const showNonCore = useAppStore((state) => state.showNonCore);
+  const showOptional = useAppStore((state) => state.showOptional);
   const [loadingNodeId, setLoadingNodeId] = useState(null);
   const [emptyHintNodeId, setEmptyHintNodeId] = useState(null);
   const [hoveredNodeId, setHoveredNodeId] = useState(null);
@@ -76,7 +76,7 @@ function GraphCanvas() {
     });
     const visibleNodes = nodes.filter((n) => {
       if (!n.is_cluster) return true;
-      const activeCount = showNonCore
+      const activeCount = showOptional
         ? n.remaining_total_count
         : n.remaining_core_count;
       return activeCount === undefined || activeCount > 0;
@@ -88,7 +88,7 @@ function GraphCanvas() {
         visibleIds.has(edgeEndpointId(e.target)),
     );
     return { nodes: sortByImportance(visibleNodes), links: finalEdges };
-  }, [nodes, edges, showNonCore]);
+  }, [nodes, edges, showOptional]);
 
   const hoveredEdgeKeys = useMemo(() => {
     if (!hoveredNodeId) return new Set();
@@ -179,7 +179,8 @@ function GraphCanvas() {
     if (node.is_cluster) {
       result = await loadMoreCluster(node);
     } else {
-      const direction = node.direction === "parent" ? "parent" : "child";
+      const direction =
+        node.direction === "depends_on" ? "depends_on" : "used_by";
       result = await expandNode(node, direction);
     }
     setLoadingNodeId(null);
@@ -333,7 +334,7 @@ function GraphCanvas() {
           const growProgress = Math.min(age / GROW_DURATION, 1);
           const easedProgress = 1 - Math.pow(1 - growProgress, 3);
           if (node.is_cluster) {
-            drawClusterNode(node, ctx, isLoadingThis, globalScale, showNonCore);
+            drawClusterNode(node, ctx, isLoadingThis, globalScale, showOptional);
             return;
           }
           const baseRadius = node.direction === "root" ? 20 : node.radius;

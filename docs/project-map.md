@@ -68,11 +68,11 @@ The snapshot is designed to avoid repeated structural joins and graph-compilatio
 
 - Stable package IDs and normalized names.
 - Release counts and first/last upload timestamps (`last_upload_date` = latest upload by time).
-- Active / displayed version (`last_version`) selected by [PEP 440](https://peps.python.org/pep-0440/) ordering, preferring a final release when any exist (not by upload date). See README “Active version and upload dates”.
+- Active / displayed version (`active_version`) selected by [PEP 440](https://peps.python.org/pep-0440/) ordering, preferring a final release when any exist (not by upload date). See README “Active version and upload dates”.
 - Active-package status.
-- `importance_score`, defined as core children plus `0.3 ×` non-core children.
-- Core/non-core parent and child counts.
-- Precomputed parent and child ID arrays suitable for Pandas, Polars, graph databases, graph algorithms, and machine-learning workflows.
+- `importance_score`, defined as core Used-by plus `0.3 ×` optional Used-by.
+- Core/optional Depends-on and Used-by counts.
+- Precomputed Depends-on and Used-by ID arrays suitable for Pandas, Polars, graph databases, graph algorithms, and machine-learning workflows.
 
 Primary downstream uses include package lifecycle and health analysis, ecosystem popularity and author analysis, dependency subgraph reconstruction, graph feature engineering, and graph/ML experimentation. The production web application and the public analytics dataset are therefore two consumers of the same optimized data foundation.
 
@@ -140,8 +140,8 @@ The PostgreSQL model is created through `pipeline/sql/pg_create_tables.sql` and 
 |---|---|
 | `pypi.indecies` | Stable numeric identity for normalized package names |
 | `pypi.metadata_cdc` | Historical package metadata states |
-| `pypi.metadata` | Current package metadata and ecosystem metrics (`last_version` via PEP 440; `last_upload_date` via max upload time) |
-| `pypi.package_connections` | Precomputed core/non-core parent and child IDs and counts |
+| `pypi.metadata` | Current package metadata and ecosystem metrics (`active_version` via PEP 440; `last_upload_date` via max upload time) |
+| `pypi.package_connections` | Precomputed core/optional Depends-on and Used-by IDs and counts |
 | `pypi.seo_cache` | Package-specific SEO headers and active status |
 
 `pypi.package_connections` denormalizes dependency relationships into arrays so graph endpoints can traverse precomputed IDs rather than repeatedly parsing requirement strings.
@@ -163,10 +163,10 @@ Package and discovery endpoints:
 
 Graph endpoints:
 
-- `GET /graph/{name}/parents` returns packages that depend on the focused package.
-- `GET /graph/{name}/children` returns packages the focused package depends on.
+- `GET /graph/{name}/depends-on` returns packages the focused package needs (Depends on).
+- `GET /graph/{name}/used-by` returns packages that need the focused package (Used by).
 
-Graph requests support bounded depth, node caps, offsets, and optional inclusion of non-core relationships. Offset-based requests power cluster pagination in the frontend.
+Graph requests support bounded depth, node caps, offsets, and inclusion of optional relationships. Offset-based requests power cluster pagination in the frontend.
 
 Web and SEO endpoints:
 
@@ -214,7 +214,7 @@ flowchart TB
 
 - Focused package identity.
 - Breadcrumb navigation.
-- Core/non-core display mode.
+- Core/optional display mode.
 - Errors and global notifications.
 - Initial/default package selection.
 
@@ -223,20 +223,20 @@ Because many frontend components depend on this store, changes to its state or a
 ### API boundary
 
 - `frontend/src/api/client.js` centralizes fetch behavior and network/not-found errors.
-- `frontend/src/api/endpoints.js` exposes named operations for search, package details, last-update data, parent/child graph requests, and paginated graph slices.
+- `frontend/src/api/endpoints.js` exposes named operations for search, package details, last-update data, Depends-on / Used-by graph requests, and paginated graph slices.
 
 ### Graph data
 
 `frontend/src/hooks/useGraphData.js` is the graph data controller:
 
-1. It fetches parent and child graphs concurrently when the focused package changes.
+1. It fetches Depends-on and Used-by graphs concurrently when the focused package changes.
 2. It combines responses through `transformInitialGraph()`.
 3. It stores the merged graph locally and enforces a total-node limit.
 4. It expands package nodes one direction at a time.
 5. It replaces cluster nodes with offset-based result slices.
-6. It filters the loaded graph to core-only reachable nodes when the non-core toggle is disabled.
+6. It filters the loaded graph to core-only reachable nodes when the optional toggle is disabled.
 
-Initial graph requests include non-core relationships. The core-only UI mode is derived client-side from the loaded graph.
+Initial graph requests include optional relationships. The core-only UI mode is derived client-side from the loaded graph.
 
 ### Transformation and layout
 
@@ -252,7 +252,7 @@ These files form the boundary between API response data and the visual graph mod
 - Single-click expansion.
 - Double-click refocusing.
 - Cluster pagination.
-- Core/non-core visibility.
+- Core/optional visibility.
 - Hover highlighting.
 - Animated node appearance.
 - Subtree dragging and pinning.

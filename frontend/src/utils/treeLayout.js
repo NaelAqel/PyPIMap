@@ -4,13 +4,13 @@ function degToRad(deg) {
   return (deg * Math.PI) / 180;
 }
 // Builds: for each node id, which node ids are "one step further out" in this direction.
-// Handles the fact that "parent" edges point outward (dependant -> dependency, root is dependant)
-// while "child" edges point inward (dependant -> dependency, root is the dependency).
+// depends_on edges: outward toward what the focus needs (root is the dependent).
+// used_by edges: outward toward who needs the focus (root is the dependency).
 function buildOutwardMap(edges, direction) {
   const map = {};
   edges.forEach((e) => {
-    const outwardFrom = direction === "parent" ? e.to : e.from;
-    const outwardTo = direction === "parent" ? e.from : e.to;
+    const outwardFrom = direction === "depends_on" ? e.to : e.from;
+    const outwardTo = direction === "depends_on" ? e.from : e.to;
     if (!map[outwardFrom]) map[outwardFrom] = [];
     map[outwardFrom].push(outwardTo);
   });
@@ -67,33 +67,33 @@ function place(
     );
   });
 }
-// Initial full layout: root at (0,0), parents fanned to one side, children to the other.
+// Initial full layout: root at (0,0), Depends on one side, Used by the other.
 export function calculateInitialLayout(
   rootId,
-  parentNodes,
-  parentEdges,
-  childNodes,
-  childEdges,
+  dependsOnNodes,
+  dependsOnEdges,
+  usedByNodes,
+  usedByEdges,
   maxNodesPerLevel = 12,
 ) {
   const nodesById = {};
-  parentNodes.forEach((n) => {
+  dependsOnNodes.forEach((n) => {
     nodesById[n.id] = n;
   });
-  childNodes.forEach((n) => {
+  usedByNodes.forEach((n) => {
     nodesById[n.id] = n;
   });
   nodesById[rootId] = nodesById[rootId] || { id: rootId };
   const positions = { [rootId]: { x: 0, y: 0 } };
-  const parentMap = buildOutwardMap(parentEdges, "parent");
-  const childMap = buildOutwardMap(childEdges, "child");
+  const dependsOnMap = buildOutwardMap(dependsOnEdges, "depends_on");
+  const usedByMap = buildOutwardMap(usedByEdges, "used_by");
   place(
     rootId,
     0,
     0,
     MAX_ARC_DEGREES,
     nodesById,
-    parentMap,
+    dependsOnMap,
     maxNodesPerLevel,
     positions,
     new Set(),
@@ -107,7 +107,7 @@ export function calculateInitialLayout(
     180,
     MAX_ARC_DEGREES,
     nodesById,
-    childMap,
+    usedByMap,
     maxNodesPerLevel,
     positions,
     new Set(),
@@ -130,7 +130,7 @@ export function calculateBranchExpansion(
   const originY = sourceNode.y || 0;
   const atOrigin = Math.abs(originX) < 0.01 && Math.abs(originY) < 0.01;
   const angleCenter = atOrigin
-    ? direction === "child"
+    ? direction === "used_by"
       ? 180
       : 0
     : (Math.atan2(originY, originX) * 180) / Math.PI;

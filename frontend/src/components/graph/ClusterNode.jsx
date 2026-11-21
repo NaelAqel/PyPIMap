@@ -5,7 +5,7 @@ export function drawClusterNode(
   ctx,
   isLoadingThis,
   globalScale,
-  showNonCore,
+  showOptional,
 ) {
   const radius = (node.radius || 18) / globalScale;
 
@@ -16,10 +16,11 @@ export function drawClusterNode(
   ctx.fill();
   ctx.globalAlpha = 1;
 
-  const count = showNonCore
+  const count = showOptional
     ? node.remaining_total_count
     : node.remaining_core_count;
-  const directionWord = node.direction === "parent" ? "parents" : "children";
+  const directionWord =
+    node.direction === "depends_on" ? "Depends on" : "Used by";
   const label = isLoadingThis
     ? "Loading..."
     : count !== undefined

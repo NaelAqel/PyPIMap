@@ -22,11 +22,15 @@ The graph can be clicked, dragged, expanded, and recentered to explore different
 
 PyPiMap's data is refreshed daily through an automated ETL pipeline.
 
+## Credits
+
+The planned **Galaxy** overview (zoomable package point-cloud → Explorer) is inspired by [Open Model Family Tree / Model Galaxy](https://github.com/h9-tec/model-family-tree). PyPIMap maps PyPI **dependencies**, not model lineage — different graph and layout; we reuse the interaction feel.
+
 ## Features
 
 - **Interactive dependency graph**: explore upstream and downstream package relationships visually
 - **Dependencies and dependents**: see what a package needs and what packages rely on it
-- **Core vs. non-core dependencies**: toggle whether optional/non-core dependencies are included
+- **Core vs. optional dependencies**: toggle whether optional dependencies are included
 - **Expand in place**: explore a node's dependency network without losing the current graph
 - **Recenter / focus**: double-click a node to make it the new focus and explore from there
 - **Cluster batching**: large dependency sets are grouped into "show more" clusters instead of displaying hundreds of nodes at once
@@ -76,11 +80,11 @@ When the ETL builds each package’s current row in `pypi.metadata`, two fields 
 
 | Field | Meaning | How it is chosen |
 |---|---|---|
-| `last_version` | Active / displayed version (aligned with the PyPI project page) | Highest version under [PEP 440](https://peps.python.org/pep-0440/), preferring a **final** release when any exist |
+| `active_version` | Active / displayed version (aligned with the PyPI project page) | Highest version under [PEP 440](https://peps.python.org/pep-0440/), preferring a **final** release when any exist |
 | `last_upload_date` | Most recent upload activity | `max(upload_date)` across all releases of that package |
 | `first_upload_date` | First seen upload | `min(upload_date)` |
 
-**`last_version` sort key** (applied in `pipeline/sql/duckdb_to_pg.sql` and `duckdb_to_pg_migration.sql`):
+**`active_version` sort key** (applied in `pipeline/sql/duckdb_to_pg.sql` and `duckdb_to_pg_migration.sql`):
 
 1. Prefer a **non-prerelease, non-dev** version if the package has one (same idea as PyPI’s project-page “latest”; see [PEP 440 final releases](https://peps.python.org/pep-0440/#final-releases) vs [pre-releases](https://peps.python.org/pep-0440/#pre-releases) / [developmental releases](https://peps.python.org/pep-0440/#developmental-releases)).
 2. Higher **epoch** wins (`N!…`; [PEP 440 version epochs](https://peps.python.org/pep-0440/#version-epochs)).
@@ -90,7 +94,7 @@ When the ETL builds each package’s current row in `pypi.metadata`, two fields 
 6. A version **without** `.dev` sorts after one with `.dev` at the same base ([PEP 440 developmental releases](https://peps.python.org/pep-0440/#developmental-releases)).
 7. Tie-break only: newer `upload_date`, then `inserted_at`.
 
-So a newer-dated backport or `.dev` upload can update `last_upload_date` without changing `last_version`. Dependency edges for the package use `requires_dist` from the PEP 440–selected version.
+So a newer-dated backport or `.dev` upload can update `last_upload_date` without changing `active_version`. Dependency edges for the package use `requires_dist` from the PEP 440–selected version.
 
 
 ## Data Sources & Attribution

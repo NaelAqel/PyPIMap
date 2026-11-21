@@ -14,30 +14,30 @@ export async function getPackageDetails(normalizedName) {
   return apiFetch(`/package/api/${encodeURIComponent(normalizedName)}`);
 }
 
-export async function getGraphParents(normalizedName, params = {}) {
+export async function getGraphDependsOn(normalizedName, params = {}) {
   const query = new URLSearchParams(params);
   return apiFetch(
-    `/graph/${encodeURIComponent(normalizedName)}/parents?${query.toString()}`,
+    `/graph/${encodeURIComponent(normalizedName)}/depends-on?${query.toString()}`,
   );
 }
 
-export async function getGraphChildren(normalizedName, params = {}) {
+export async function getGraphUsedBy(normalizedName, params = {}) {
   const query = new URLSearchParams(params);
   return apiFetch(
-    `/graph/${encodeURIComponent(normalizedName)}/children?${query.toString()}`,
+    `/graph/${encodeURIComponent(normalizedName)}/used-by?${query.toString()}`,
   );
 }
 
-export async function getGraphSliceParents(clusterId, offset, params = {}) {
+export async function getGraphSliceDependsOn(clusterId, offset, params = {}) {
   const query = new URLSearchParams({ offset, ...params });
   return apiFetch(
-    `/graph/${encodeURIComponent(clusterId)}/parents?${query.toString()}`,
+    `/graph/${encodeURIComponent(clusterId)}/depends-on?${query.toString()}`,
   );
 }
 
-export async function getGraphSliceChildren(clusterId, offset, params = {}) {
+export async function getGraphSliceUsedBy(clusterId, offset, params = {}) {
   const query = new URLSearchParams({ offset, ...params });
   return apiFetch(
-    `/graph/${encodeURIComponent(clusterId)}/children?${query.toString()}`,
+    `/graph/${encodeURIComponent(clusterId)}/used-by?${query.toString()}`,
   );
 }

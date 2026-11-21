@@ -22,8 +22,8 @@ function Legend() {
         Legend
       </p>
       <LegendRow color="#f8fafc" label="Root package" dashed={null} />
-      <LegendRow color="#38bdf8" label="Upstream (needs)" dashed={null} />
-      <LegendRow color="#fb923c" label="Downstream (feeds)" dashed={null} />
+      <LegendRow color="#38bdf8" label="Depends on" dashed={null} />
+      <LegendRow color="#fb923c" label="Used by" dashed={null} />
       <div className="border-t border-slate-700 my-1" />
       <div className="text-xs text-slate-400">Solid line = Core package</div>
       <div className="text-xs text-slate-400">

@@ -4,7 +4,7 @@ export const useAppStore = create((set) => ({
   focusedPackageId: null,
   focusedPackageName: null,
   breadcrumbs: [],
-  showNonCore: true, // Synced to API default parameter value
+  showOptional: true, // Synced to API default parameter value
   errorState: null, // { type: 'network' | 'warning', message } or null
   toastMessage: null,
 
@@ -37,8 +37,8 @@ export const useAppStore = create((set) => ({
       return { breadcrumbs: updated };
     }),
 
-  toggleShowNonCore: () =>
-    set((state) => ({ showNonCore: !state.showNonCore })),
+  toggleShowOptional: () =>
+    set((state) => ({ showOptional: !state.showOptional })),
 
   setError: (errorState) => set({ errorState }),
 

@@ -92,20 +92,20 @@ function GuidePage() {
               center) - the package you're currently viewing.
             </li>
             <li>
-              <strong className="text-white">Upstream nodes</strong> (blue) -
-              packages that depend on the focused package.
+              <strong className="text-white">Depends on</strong> (blue) —
+              packages the focused package needs.
             </li>
             <li>
-              <strong className="text-white">Downstream nodes</strong> (orange)
-              - packages the focused package depends on.
+              <strong className="text-white">Used by</strong> (orange) —
+              packages that need the focused package.
             </li>
             <li>
               <strong className="text-white">Solid lines</strong> - core
               (required) dependencies.
             </li>
             <li>
-              <strong className="text-white">Dashed lines</strong> - non-core
-              (optional) dependencies.
+              <strong className="text-white">Dashed lines</strong> - optional
+              dependencies.
             </li>
             <li>
               <strong className="text-white">Node size</strong> - reflects
@@ -123,9 +123,9 @@ function GuidePage() {
             Core vs Non-Core Dependencies
           </h2>
           <p className="text-slate-300 leading-relaxed">
-            PyPiMap distinguishes between core and non-core dependency
+            PyPiMap distinguishes between core and optional dependency
             relationships. Core dependencies are required by a package, while
-            non-core dependencies are optional relationships such as extras or
+            optional dependencies are optional relationships such as extras or
             development dependencies.
           </p>
         </section>
@@ -157,7 +157,7 @@ function GuidePage() {
                   "Reset view button",
                   "Re-fits the camera without changing the root",
                 ],
-                ["Show non-core toggle", "Shows/hides optional dependencies"],
+                ["Show optional toggle", "Shows/hides optional dependencies"],
               ].map(([action, result]) => (
                 <tr key={action} className="border-t border-slate-700">
                   <td className="p-3 font-medium text-white">{action}</td>
@@ -181,7 +181,7 @@ function GuidePage() {
             </li>
             <li>
               <strong className="text-white">
-                Non-core upstream/downstream relationships
+                Optional upstream/downstream relationships
               </strong>{" "}
               - optional relationships (extras, dev deps).
             </li>
@@ -190,7 +190,7 @@ function GuidePage() {
               relative centrality within the ecosystem.
             </li>
             <li>
-              <strong className="text-white">Last version</strong> - the
+              <strong className="text-white">Active version</strong> - the
               package&apos;s active version under{" "}
               <a
                 href="https://peps.python.org/pep-0440/"
@@ -206,7 +206,7 @@ function GuidePage() {
             <li>
               <strong className="text-white">Last upload date</strong> - the
               most recent upload time for any release of that package, which
-              can differ from the last version&apos;s upload date.
+              can differ from the active version&apos;s upload date.
             </li>
           </ul>
         </section>
@@ -288,12 +288,12 @@ function GuidePage() {
                 ],
                 ["GET /package/api/{name}", "Package metadata as JSON"],
                 [
-                  "GET /graph/{name}/parents",
-                  "Upstream dependency graph (nodes + edges)",
+                  "GET /graph/{name}/depends-on",
+                  "Depends on graph (nodes + edges)",
                 ],
                 [
-                  "GET /graph/{name}/children",
-                  "Downstream dependency graph (nodes + edges)",
+                  "GET /graph/{name}/used-by",
+                  "Used by graph (nodes + edges)",
                 ],
                 ["GET /search?q={query}", "Search packages by name or author"],
                 ["GET /sitemap.xml", "Sitemap index for all indexed packages"],

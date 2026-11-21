@@ -1,8 +1,8 @@
 import { calculateInitialLayout, calculateBranchExpansion } from "./treeLayout";
 const COLORS = {
   root: "#f8fafc",
-  parent: "#38bdf8",
-  child: "#fb923c",
+  depends_on: "#38bdf8",
+  used_by: "#fb923c",
 };
 function opacityForLevel(level) {
   if (level === 0) return 1.0;
@@ -56,12 +56,12 @@ function styleEdges(rawEdges, nodeById) {
     direction: e.direction,
     is_core: e.is_core,
     dashed: !e.is_core,
-    color: e.direction === "parent" ? COLORS.parent : COLORS.child,
+    color: e.direction === "depends_on" ? COLORS.depends_on : COLORS.used_by,
     opacity: edgeOpacity(nodeById[e.from], nodeById[e.to]),
   }));
 }
-function filterCore(nodes, edges, showNonCore, rootId) {
-  let finalEdges = showNonCore ? edges : edges.filter((e) => e.is_core);
+function filterCore(nodes, edges, showOptional, rootId) {
+  let finalEdges = showOptional ? edges : edges.filter((e) => e.is_core);
   const connected = new Set();
   finalEdges.forEach((e) => {
     connected.add(edgeEndpointId(e.source));
@@ -84,20 +84,20 @@ function dedupeNodes(rawNodes) {
   });
   return Object.values(byId);
 }
-// Builds the full initial graph from separate parent/child API results.
+// Builds the full initial graph from separate depends-on / used-by API results.
 export function transformInitialGraph(
-  parentResult,
-  childResult,
-  showNonCore = true,
+  dependsOnResult,
+  usedByResult,
+  showOptional = true,
 ) {
   const rootRaw =
-    parentResult.nodes.find((n) => n.direction === "root") ||
-    childResult.nodes.find((n) => n.direction === "root");
-  const rootId = rootRaw ? rootRaw.id : parentResult.root_normalized_name;
-  const parentRawNodes = parentResult.nodes.filter(
+    dependsOnResult.nodes.find((n) => n.direction === "root") ||
+    usedByResult.nodes.find((n) => n.direction === "root");
+  const rootId = rootRaw ? rootRaw.id : dependsOnResult.root_normalized_name;
+  const dependsOnRawNodes = dependsOnResult.nodes.filter(
     (n) => n.direction !== "root",
   );
-  const childRawNodes = childResult.nodes.filter((n) => n.direction !== "root");
+  const usedByRawNodes = usedByResult.nodes.filter((n) => n.direction !== "root");
   const allRawNodes = dedupeNodes([
     rootRaw || {
       id: rootId,
@@ -106,10 +106,10 @@ export function transformInitialGraph(
       is_core: true,
       is_cluster: false,
     },
-    ...parentRawNodes,
-    ...childRawNodes,
+    ...dependsOnRawNodes,
+    ...usedByRawNodes,
   ]);
-  const allRawEdges = [...parentResult.edges, ...childResult.edges];
+  const allRawEdges = [...dependsOnResult.edges, ...usedByResult.edges];
   const styledNodes = allRawNodes.map(styleNode);
   const nodeById = {};
   styledNodes.forEach((n) => {
@@ -118,17 +118,17 @@ export function transformInitialGraph(
   const styledEdges = styleEdges(allRawEdges, nodeById);
   const positions = calculateInitialLayout(
     rootId,
-    parentRawNodes,
-    parentResult.edges,
-    childRawNodes,
-    childResult.edges,
+    dependsOnRawNodes,
+    dependsOnResult.edges,
+    usedByRawNodes,
+    usedByResult.edges,
     35,
   );
   const positionedNodes = styledNodes.map((n) => {
     const pos = positions[n.id] || { x: 0, y: 0 };
     return { ...n, x: pos.x, y: pos.y, fx: pos.x, fy: pos.y };
   });
-  return filterCore(positionedNodes, styledEdges, showNonCore, rootId);
+  return filterCore(positionedNodes, styledEdges, showOptional, rootId);
 }
 // Merges a newly-fetched batch (expand or cluster "show more") into the current graph,
 // anchored to sourceNode, continuing outward in its existing direction.
@@ -144,9 +144,9 @@ export function mergeExpansion(
     prevState.nodes.find((n) => n.id === sourceNodeRef.id) || sourceNodeRef;
   const inferredDirection = newRawEdges[0]
     ? newRawEdges[0].direction
-    : sourceNode.direction === "child"
-      ? "child"
-      : "parent";
+    : sourceNode.direction === "used_by"
+      ? "used_by"
+      : "depends_on";
   const styledNew = newRawNodes.map(styleNode);
   const dedupedStyledNew = styledNew.filter(
     (n) => !prevState.nodes.some((existing) => existing.id === n.id),

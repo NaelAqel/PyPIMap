@@ -36,7 +36,7 @@ const steps = [
   },
   {
     title: "Show More",
-    text: "`+N more parents/children` Nodes are collapsed. Click one to reveal the rest.",
+    text: "`+N more Depends on / Used by` Nodes are collapsed. Click one to reveal the rest.",
     bullets: [],
     position: "center",
   },

@@ -1,9 +1,9 @@
 import { useEffect, useState, useRef } from "react";
 import {
-  getGraphParents,
-  getGraphChildren,
-  getGraphSliceParents,
-  getGraphSliceChildren,
+  getGraphDependsOn,
+  getGraphUsedBy,
+  getGraphSliceDependsOn,
+  getGraphSliceUsedBy,
 } from "../api/endpoints";
 import { useAppStore } from "../store/appStore";
 import { NetworkError } from "../api/client";
@@ -15,12 +15,9 @@ const MAX_TOTAL_NODES = 500;
 
 export function useGraphData() {
   const focusedPackageId = useAppStore((state) => state.focusedPackageId);
-  const showNonCore = useAppStore((state) => state.showNonCore);
-  const setFocusedPackage = useAppStore((state) => state.setFocusedPackage);
+  const showOptional = useAppStore((state) => state.showOptional);
   const setError = useAppStore((state) => state.setError);
 
-  const [rawParentData, setRawParentData] = useState(null);
-  const [rawChildData, setRawChildData] = useState(null);
   const [fullGraphState, setFullGraphState] = useState({
     nodes: [],
     edges: [],
@@ -36,23 +33,21 @@ export function useGraphData() {
     setIsLoading(true);
 
     Promise.all([
-      getGraphParents(focusedPackageId, {
+      getGraphDependsOn(focusedPackageId, {
         depth: DEFAULT_DEPTH,
         node_cap: DEFAULT_NODE_CAP,
-        show_non_core: true,
+        show_optional: true,
       }),
-      getGraphChildren(focusedPackageId, {
+      getGraphUsedBy(focusedPackageId, {
         depth: DEFAULT_DEPTH,
         node_cap: DEFAULT_NODE_CAP,
-        show_non_core: true,
+        show_optional: true,
       }),
     ])
-      .then(([parentResult, childResult]) => {
+      .then(([dependsOnResult, usedByResult]) => {
         if (cancelled) return;
-        setRawParentData(parentResult);
-        setRawChildData(childResult);
 
-        const built = transformInitialGraph(parentResult, childResult, true);
+        const built = transformInitialGraph(dependsOnResult, usedByResult, true);
         applyResult(built);
         clusterOffsets.current = {};
         setIsLoading(false);
@@ -98,11 +93,11 @@ export function useGraphData() {
     }
     try {
       const fetcher =
-        direction === "parent" ? getGraphParents : getGraphChildren;
+        direction === "depends_on" ? getGraphDependsOn : getGraphUsedBy;
       const result = await fetcher(node.id, {
         depth: 1,
         node_cap: DEFAULT_NODE_CAP,
-        show_non_core: true,
+        show_optional: true,
       });
 
       // drop the echoed root (the clicked node itself) — we already have it on screen
@@ -130,7 +125,9 @@ export function useGraphData() {
   // --- Cluster "show more", one direction only (inferred from cluster id) ---
   async function loadMoreCluster(clusterNode) {
     const clusterId = clusterNode.id;
-    const direction = clusterId.startsWith("cluster_p_") ? "parent" : "child";
+    const direction = clusterId.startsWith("cluster_d_")
+      ? "depends_on"
+      : "used_by";
 
     const existingCount = fullGraphState.nodes.filter((n) =>
       String(n.id).startsWith(String(clusterId)),
@@ -150,11 +147,11 @@ export function useGraphData() {
 
     try {
       const fetcher =
-        direction === "parent" ? getGraphSliceParents : getGraphSliceChildren;
+        direction === "depends_on" ? getGraphSliceDependsOn : getGraphSliceUsedBy;
       const result = await fetcher(clusterId, offset, {
         depth: DEFAULT_DEPTH,
         node_cap: DEFAULT_NODE_CAP,
-        show_non_core: showNonCore,
+        show_optional: showOptional,
       });
 
       setFullGraphState((prev) =>
@@ -176,7 +173,7 @@ export function useGraphData() {
   }
 
   const rootId = fullGraphState.nodes.find((n) => n.direction === "root")?.id;
-  const visibleGraph = showNonCore
+  const visibleGraph = showOptional
     ? fullGraphState
     : filterCoreOnly(fullGraphState, rootId);
 

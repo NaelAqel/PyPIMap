@@ -43,6 +43,11 @@ The planned **Galaxy** overview (zoomable package point-cloud → Explorer) is i
 - **Backend:** FastAPI, PostgreSQL    
 - **Pipeline:** DuckDB and PostgreSQL-based ETL pipeline, orchestrated through scheduled jobs
 - **Infrastructure:** Hetzner hosting with Cloudflare for DNS, proxying, and edge delivery.
+- **MCP (draft):** read-only stdio server in `mcp/` over the public API — see [`mcp/README.md`](./mcp/README.md)
+
+## MCP (agents)
+
+Draft MCP tools mirror `search`, `package/api`, `depends-on`, `used-by`, and `last_update`. Install and Cursor config: [`mcp/README.md`](./mcp/README.md).
 
 
 ## Data Pipeline

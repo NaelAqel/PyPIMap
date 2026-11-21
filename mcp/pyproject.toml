@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pypimap-mcp"
+version = "0.1.0"
+description = "Read-only MCP server for the PyPIMap public API (Depends on / Used by)."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "httpx>=0.27",
+  "mcp>=1.9,<2",
+]
+
+[project.scripts]
+pypimap-mcp = "pypimap_mcp.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

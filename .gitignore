@@ -27,3 +27,8 @@ dist/
 
 # Logs
 *.log
+
+# MCP local venv / build
+mcp/.venv/
+mcp/**/*.egg-info/
+mcp/**/__pycache__/

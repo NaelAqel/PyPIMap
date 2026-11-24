@@ -9,6 +9,7 @@ from typing import Any
 
 import uvicorn
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from starlette.requests import Request
 from starlette.responses import JSONResponse, PlainTextResponse
 
@@ -27,6 +28,8 @@ INSTRUCTIONS = (
     "Interactive lookup only; respect rate limits. " + dataset_blurb()
 )
 
+# Behind Caddy/Cloudflare the public Host is mcp.pypimap.com. FastMCP's
+# default localhost DNS-rebinding allowlist would 421 those requests.
 mcp = FastMCP(
     "pypimap",
     instructions=INSTRUCTIONS,
@@ -35,6 +38,9 @@ mcp = FastMCP(
     streamable_http_path=MCP_PATH,
     # Stateless keeps local multi-client smoke tests simple.
     stateless_http=True,
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=False,
+    ),
 )
 
 

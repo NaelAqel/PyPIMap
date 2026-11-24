@@ -8,6 +8,7 @@ import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { getLastUpdate } from "../../api/endpoints";
 import { formatDate } from "../../utils/formatDate";
 import GuidePage from "../guide/GuidePage";
+import McpPage from "../mcp/McpPage";
 import { lazy, Suspense } from "react";
 
 const GraphCanvas = lazy(() => import("../graph/GraphCanvas"));
@@ -26,10 +27,13 @@ function AppShell() {
   const isMobile = useMediaQuery();
   const [lastUpdateDate, setLastUpdateDate] = useState(null);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-  const isGuidePage = window.location.pathname === "/guide";
+  const pathname = window.location.pathname;
+  const isGuidePage = pathname === "/guide";
+  const isMcpPage = pathname === "/mcp";
+  const isStaticDocPage = isGuidePage || isMcpPage;
 
   useEffect(() => {
-    if (isGuidePage) return;
+    if (isStaticDocPage) return;
     initializeDefaultPackage();
 
     getLastUpdate()
@@ -37,10 +41,13 @@ function AppShell() {
       .catch((err) =>
         console.log("getLastUpdate ERROR:", err.name, err.message),
       );
-  }, [isGuidePage]);
+  }, [isStaticDocPage]);
 
   if (isGuidePage) {
     return <GuidePage />;
+  }
+  if (isMcpPage) {
+    return <McpPage />;
   }
 
   return (

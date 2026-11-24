@@ -43,11 +43,15 @@ The planned **Galaxy** overview (zoomable package point-cloud → Explorer) is i
 - **Backend:** FastAPI, PostgreSQL    
 - **Pipeline:** DuckDB and PostgreSQL-based ETL pipeline, orchestrated through scheduled jobs
 - **Infrastructure:** Hetzner hosting with Cloudflare for DNS, proxying, and edge delivery.
-- **MCP (draft):** read-only stdio server in `mcp/` over the public API — see [`mcp/README.md`](./mcp/README.md)
+- **MCP:** read-only tools over the public API — docs at `/mcp`, package in [`mcp/`](./mcp/README.md)
 
 ## MCP (agents)
 
-Draft MCP tools mirror `search`, `package/api`, `depends-on`, `used-by`, and `last_update`. Install and Cursor config: [`mcp/README.md`](./mcp/README.md).
+Tools mirror `search`, `package/api`, `depends-on`, `used-by`, and `last_update`.
+
+- **Docs:** [pypimap.com/mcp](https://pypimap.com/mcp) (local: `/mcp` on the frontend)
+- **Hosted URL (when live):** `https://mcp.pypimap.com/mcp`
+- **Local HTTP / stdio:** [`mcp/README.md`](./mcp/README.md)
 
 
 ## Data Pipeline

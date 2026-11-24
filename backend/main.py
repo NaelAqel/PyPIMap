@@ -646,6 +646,7 @@ def get_llms_txt():
         "- [Example](https://pypimap.com/package/numpy): Package view — replace `numpy` with any active name\n"
         "- [Search](https://pypimap.com/search?q=numpy): Substring match on package name or author\n"
         "- [Guide](https://pypimap.com/guide): UI + API reference\n"
+        "- [MCP](https://pypimap.com/mcp): Agent MCP docs - connect URL, tools, limits\n"
         "- [llms.txt](https://pypimap.com/llms.txt): This file\n\n"
         "## Public API (https://api.pypimap.com)\n\n"
         "- `GET /search?q={query}&limit={1-50}` — name or author substring\n"
@@ -653,10 +654,15 @@ def get_llms_txt():
         "- `GET /graph/{name}/depends-on` — Depends on graph (`depth`, `node_cap` ≥ 10, `show_optional`)\n"
         "- `GET /graph/{name}/used-by` — Used by graph (same query params)\n"
         "- `GET /last_update` — pipeline freshness\n\n"
-        "## MCP (local agents)\n\n"
-        "Optional stdio MCP server for Cursor / Claude Desktop wraps the same API "
-        "(tools: search_packages, package_info, package_depends_on, package_used_by, last_update). "
-        "See the `mcp/` package in the [PyPIMap repo](https://github.com/naelaqel/pypimap).\n\n"
+        "## MCP (agents)\n\n"
+        "Prefer the hosted MCP when available: `https://mcp.pypimap.com/mcp` "
+        "(streamable HTTP). Docs: [pypimap.com/mcp](https://pypimap.com/mcp).\n\n"
+        "Tools (read-only): search_packages, package_info, package_depends_on, "
+        "package_used_by, last_update. Interactive lookup only — rate-limited; "
+        "for bulk offline use the Kaggle dataset (DOI below).\n\n"
+        "Local alternatives: HTTP (`pypimap-mcp --transport streamable-http`) or "
+        "stdio for Cursor / Claude Desktop — see `mcp/` in the "
+        "[PyPIMap repo](https://github.com/naelaqel/pypimap).\n\n"
         "## Data\n\n"
         "Refreshed daily. Bulk download: "
         "[Kaggle dataset](https://www.kaggle.com/datasets/naelaqel/pypi-daily-metadata-and-analytics-base-dataset/data) "
@@ -699,6 +705,7 @@ def get_static_sitemap():
     static_pages = [
         ("https://pypimap.com/", "1.0", "always"),
         ("https://pypimap.com/guide", "0.6", "monthly"),
+        ("https://pypimap.com/mcp", "0.6", "monthly"),
     ]
 
     body = "\n".join(

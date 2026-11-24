@@ -93,14 +93,16 @@ flowchart LR
 - `db_seeder` runs `python -u -m pipeline.etl --seed-only` before the backend starts.
 - `backend` serves FastAPI and mounts the built frontend distribution for package-specific SEO pages and static assets.
 - `frontend` builds and serves the React/Vite application and shares its distribution through `frontend_dist`.
+- `mcp` serves hosted streamable-HTTP MCP (read-only tools over the public API).
 - `caddy` exposes HTTP/HTTPS and routes public traffic.
 - `pipeline` runs the recurring ETL workflow separately from initial database seeding.
 
 `Caddyfile` divides public traffic as follows:
 
 - `pypimap.com/package/*`, sitemap routes, crawler files, and the IndexNow verification file go to FastAPI.
-- Other `pypimap.com` requests go to the frontend.
+- Other `pypimap.com` requests go to the frontend (including `/mcp` docs).
 - All `api.pypimap.com` requests go to FastAPI.
+- All `mcp.pypimap.com` requests go to the `mcp` service (streamable HTTP MCP).
 
 ## Pipeline
 
@@ -279,32 +281,36 @@ Start with these files according to the task:
 | Graph interaction or drawing | `frontend/src/components/graph/GraphCanvas.jsx` |
 | Runtime topology | `docker-compose.yml`, `Caddyfile` |
 
+## Current product gate
+
+Next implementation cycle: **Website MVP / Galaxy + related cleanups** (`docs/product-specs.md` §3, `docs/git.md`) — prepare in one effort, **one production release** when ready. **SEO redesign is out of that cycle** (later dedicated batch). Hosted MCP is on `feature/hosted-mcp` (stdio + HTTP + `/mcp` docs + Compose/Caddy); go-live needs DNS `mcp.pypimap.com` + deploy. Prefer `.tools/ripwire` when orienting.
+
 ## Ripwire workflow
 
 For a new task, retrieve durable project knowledge before mapping current code:
 
 ```bash
-ripwire . --recall="<task>"
-ripwire . --pack-task="<task>" --token-budget=10000
+.tools/ripwire . --recall="<task>"
+.tools/ripwire . --pack-task="<task>" --token-budget=10000
 ```
 
 Before adding a function or class, look for the repository's established pattern:
 
 ```bash
-ripwire . --exemplar="<subtask>"
+.tools/ripwire . --exemplar="<subtask>"
 ```
 
 After editing an important symbol, check its contract and callers:
 
 ```bash
-ripwire . --edit-check=<symbol>
+.tools/ripwire . --edit-check=<symbol>
 ```
 
 Before finishing, inspect change impact and quality regressions:
 
 ```bash
-ripwire . --situ
-ripwire . --quality-delta
+.tools/ripwire . --situ
+.tools/ripwire . --quality-delta
 ```
 
 Use `.ripwire_notes` for non-obvious symbol- or file-specific invariants. Do not store generated reports, hotspot values, line numbers, symbol counts, or module IDs in this document; regenerate those from the current tree.

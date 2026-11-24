@@ -31,3 +31,7 @@ pypimap.com {
 api.pypimap.com {
     reverse_proxy backend:8000
 }
+
+mcp.pypimap.com {
+    reverse_proxy mcp:8765
+}

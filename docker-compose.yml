@@ -103,7 +103,31 @@ services:
     networks:
       - app_network
 
-  # 5. Caddy Reverse Proxy — routes pypimap.com/api.pypimap.com traffic to frontend/backend, with automatic HTTPS
+  # 5. Hosted MCP (streamable HTTP) — public face at mcp.pypimap.com
+  mcp:
+    build:
+      context: ./mcp
+      dockerfile: Dockerfile
+    container_name: pypimap_mcp
+    restart: always
+    environment:
+      PYPIMAP_API_BASE: ${PYPIMAP_API_BASE:-http://backend:8000}
+      PYPIMAP_MCP_TRANSPORT: streamable-http
+      PYPIMAP_MCP_HOST: 0.0.0.0
+      PYPIMAP_MCP_PORT: 8765
+      PYPIMAP_MCP_RATE_PER_MIN: ${PYPIMAP_MCP_RATE_PER_MIN:-60}
+      PYPIMAP_MCP_RATE_PER_DAY: ${PYPIMAP_MCP_RATE_PER_DAY:-2000}
+      PYPIMAP_MCP_LOG_LEVEL: ${PYPIMAP_MCP_LOG_LEVEL:-INFO}
+    ports:
+      - target: 8765
+        published: "${MCP_PORT:-8765}"
+        protocol: tcp
+    depends_on:
+      - backend
+    networks:
+      - app_network
+
+  # 6. Caddy Reverse Proxy — pypimap.com / api.pypimap.com / mcp.pypimap.com
   caddy:
     image: caddy:alpine
     container_name: caddy_proxy
@@ -118,10 +142,11 @@ services:
     depends_on:
       - backend
       - frontend
+      - mcp
     networks:
       - app_network
 
-  # 6. The Daily ETL Pipeline Layer (Cron)
+  # 7. The Daily ETL Pipeline Layer (Cron)
   pipeline:
     build:
       context: .
@@ -158,4 +183,4 @@ volumes:
 
 networks:
   app_network:
-    driver: bridge # Isolates network traffic strictly between these 4 containers
+    driver: bridge # Isolates network traffic between app containers

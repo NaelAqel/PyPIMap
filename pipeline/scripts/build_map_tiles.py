@@ -105,13 +105,20 @@ def build(
             f"(or pass --from PATH)"
         )
 
-    print(f"reading {src} …")
+    # Pin edges use the live API. Building neighbors.json for ~1M packages OOMs
+    # the ETL box - keep an empty stub only.
+    _ = pin_cap
+    print(f"reading {src} ...", flush=True)
     payload = json.loads(src.read_text(encoding="utf-8"))
-    nodes = [compact_node(n) for n in payload["nodes"]]
-    edges = payload.get("edges") or []
+    raw_nodes = payload["nodes"]
+    payload.clear()
+    del payload
+    nodes = [compact_node(n) for n in raw_nodes]
+    del raw_nodes
     n = len(nodes)
     if n == 0:
         raise SystemExit("no nodes")
+    print(f"loaded nodes={n} (neighbors=off)", flush=True)
 
     xs = [p["x"] for p in nodes]
     ys = [p["y"] for p in nodes]
@@ -132,6 +139,7 @@ def build(
         ty = int((y - min_y) / span_y * grid)
         return min(grid - 1, max(0, tx)), min(grid - 1, max(0, ty))
 
+    print("bucketing tiles + search_index ...", flush=True)
     buckets: dict[tuple[int, int], list] = {}
     search_index = []
     for node in nodes:
@@ -152,27 +160,7 @@ def build(
     ranked = sorted(nodes, key=lambda p: -p["importance_score"])
     overview = ranked[: min(overview_cap, n)]
 
-    deg_depends: dict[str, list] = {p["id"]: [] for p in nodes}
-    deg_used: dict[str, list] = {p["id"]: [] for p in nodes}
-    imp_of = {p["id"]: p["importance_score"] for p in nodes}
-    for e in edges:
-        s, t = e["source"], e["target"]
-        if s not in imp_of or t not in imp_of:
-            continue
-        is_core = e.get("is_core", True) is not False
-        deg_depends[s].append((t, is_core))
-        deg_used[t].append((s, is_core))
-
-    neighbors = {}
-    for pid in imp_of:
-        deps = sorted(deg_depends[pid], key=lambda x: -imp_of.get(x[0], 0))[:pin_cap]
-        used = sorted(deg_used[pid], key=lambda x: -imp_of.get(x[0], 0))[:pin_cap]
-        if deps or used:
-            neighbors[pid] = {
-                "depends_on": [[a, c] for a, c in deps],
-                "used_by": [[a, c] for a, c in used],
-            }
-
+    print("writing tile files ...", flush=True)
     if out_dir.exists():
         shutil.rmtree(out_dir)
     out_dir.mkdir(parents=True)
@@ -197,9 +185,7 @@ def build(
     )
 
     neighbors_path = out_dir / "neighbors.json"
-    neighbors_path.write_text(
-        json.dumps(neighbors, separators=(",", ":")), encoding="utf-8"
-    )
+    neighbors_path.write_text("{}", encoding="utf-8")
 
     # URLs relative to artifact root (pipeline/artifacts/galaxy/) for D-API/CDN
     meta = {
@@ -224,8 +210,7 @@ def build(
         "fail_open": True,
         "notes": [
             "Overview = far map. Zoom/pan loads only visible tiles.",
-            "Same pattern scales toward ~1M with more tiles / LOD levels.",
-            "Wave A scaffold - Explorer live API remains source of truth for hubs.",
+            "neighbors.json is empty on purpose - pin edges use the live API.",
         ],
     }
     meta_path = out_dir / "meta.json"
@@ -236,14 +221,16 @@ def build(
 
     print(
         f"tiles: grid={grid}x{grid} written={len(buckets)} "
-        f"overview={len(overview)} total={n}"
+        f"overview={len(overview)} total={n}",
+        flush=True,
     )
     print(
         f"sizes: overview={mb(overview_path):.3f}MB "
         f"search={mb(search_path):.3f}MB neighbors={mb(neighbors_path):.3f}MB "
-        f"wall_s={time.time() - t0:.1f}"
+        f"wall_s={time.time() - t0:.1f}",
+        flush=True,
     )
-    print(f"meta: {meta_path}")
+    print(f"meta: {meta_path}", flush=True)
     return meta
 
 

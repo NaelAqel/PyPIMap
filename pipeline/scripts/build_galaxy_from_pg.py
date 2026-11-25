@@ -211,10 +211,15 @@ def run_from_pg(
             }
         )
 
-    print(f"writing {graph_path} …")
+    edge_count = len(edges)
+    # Edges are only needed for layout. Pin edges at runtime use the live API.
+    # Do not persist them - reloading a 300MB+ edges blob OOMs tile build.
+    del edges
+
+    print(f"writing {graph_path} (nodes only) ...", flush=True)
     t2 = time.time()
     graph_path.write_text(
-        json.dumps({"nodes": laid_nodes, "edges": edges}, separators=(",", ":")),
+        json.dumps({"nodes": laid_nodes}, separators=(",", ":")),
         encoding="utf-8",
     )
     (out_dir / "galaxy_positions.json").write_text(
@@ -225,7 +230,7 @@ def run_from_pg(
         "generated_at": stamp,
         "source": f"postgres:{host}/{dbname}",
         "node_count": len(laid_nodes),
-        "edge_count": len(edges),
+        "edge_count": edge_count,
         "oval_aspect": oval_aspect,
         "layout": "hub-cluster mild oval from live PG (no ETL)",
         "layout_seconds": round(layout_s, 2),
@@ -236,16 +241,19 @@ def run_from_pg(
         json.dumps(pos_meta, indent=2), encoding="utf-8"
     )
     print(
-        f"wrote graph {graph_path.stat().st_size / 1e6:.1f} MB in {time.time() - t2:.1f}s"
+        f"wrote graph {graph_path.stat().st_size / 1e6:.1f} MB in {time.time() - t2:.1f}s",
+        flush=True,
     )
 
-    print("building map tiles …")
+    print("building map tiles ...", flush=True)
+    # Pass nodes in-memory - do not re-parse the graph file.
     meta = tiles.build(
         graph_path,
         out_dir / "tiles",
         grid=grid,
         overview_cap=overview,
         pin_cap=pin_cap,
+        nodes=laid_nodes,
     )
     # Normalize URLs for Vite / D-API mount
     meta["overview_url"] = "tiles/overview.json"

@@ -1,42 +1,136 @@
 import os
+import pathlib
 import re
-from html import escape
 
-from fastapi import FastAPI, HTTPException, Query, Request, Response, status
+from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import (
-    FileResponse,
-    HTMLResponse,
-    PlainTextResponse,
-    RedirectResponse,
-)
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from psycopg_pool import ConnectionPool
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
+from seo.meta import (
+    EXPLORE_DESCRIPTION,
+    GUIDE_DESCRIPTION,
+    GUIDE_TITLE,
+    LANDING_DESCRIPTION,
+    LANDING_TITLE,
+    MCP_DESCRIPTION,
+    MCP_TITLE,
+    site_json_ld,
+)
+
 app = FastAPI()
 
-SITEMAP_CHUNK_SIZE = 50000
+FRONTEND_DIST = os.environ.get("FRONTEND_DIST", "/app/frontend_dist")
+_SEO_DIR = pathlib.Path(__file__).resolve().parent / "seo"
+# D-Data contract: /galaxy/* → pipeline/artifacts/galaxy/ (or GALAXY_ARTIFACT_ROOT).
+_DEFAULT_GALAXY_ROOTS = (
+    os.environ.get("GALAXY_ARTIFACT_ROOT", ""),
+    "/app/galaxy",
+    str(
+        pathlib.Path(__file__).resolve().parents[1]
+        / "pipeline"
+        / "artifacts"
+        / "galaxy"
+    ),
+)
 
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-app.mount("/assets", StaticFiles(directory="/app/frontend_dist/assets"), name="assets")
+app.mount(
+    "/assets",
+    StaticFiles(directory=f"{FRONTEND_DIST}/assets"),
+    name="assets",
+)
+
+# Thin static serve for Galaxy artifacts (Wave A stub; Wave B D-Galaxy consumes).
+_galaxy_root = next(
+    (p for p in _DEFAULT_GALAXY_ROOTS if p and os.path.isdir(p)),
+    None,
+)
+_galaxy_index_cache: bytes | None = None
+
+
+def _locate_galaxy_package(package_id: str) -> dict | None:
+    """Find one search_index hit without loading the full 84MB JSON into Python dicts."""
+    global _galaxy_index_cache
+    if not _galaxy_root:
+        return None
+    raw = (package_id or "").strip().lower()
+    if not raw or len(raw) > 214:
+        return None
+    index_path = pathlib.Path(_galaxy_root) / "tiles" / "search_index.json"
+    if not index_path.is_file():
+        return None
+    if _galaxy_index_cache is None:
+        _galaxy_index_cache = index_path.read_bytes()
+    needle = f'"id":"{raw}"'.encode()
+    at = _galaxy_index_cache.find(needle)
+    if at < 0:
+        return None
+    start = _galaxy_index_cache.rfind(b"{", 0, at)
+    end = _galaxy_index_cache.find(b"}", at)
+    if start < 0 or end < 0 or end <= start:
+        return None
+    import json as _json
+
+    try:
+        return _json.loads(_galaxy_index_cache[start : end + 1])
+    except (_json.JSONDecodeError, UnicodeDecodeError, ValueError):
+        return None
+
+
+# Never let browsers pull the 84MB / 74MB galaxy indexes (main-thread freeze).
+_GALAXY_MEGA_BASENAMES = frozenset({"search_index.json", "neighbors.json"})
+
+
+@app.middleware("http")
+async def block_galaxy_mega_artifacts(request: Request, call_next):
+    path = request.url.path or ""
+    if (
+        path.startswith("/galaxy/")
+        and path.rsplit("/", 1)[-1] in _GALAXY_MEGA_BASENAMES
+    ):
+        return Response(
+            content='{"detail":"Use /galaxy/locate?id=... for pins. Full search_index/neighbors are not served."}',
+            status_code=403,
+            media_type="application/json",
+        )
+    return await call_next(request)
+
+
+if _galaxy_root:
+
+    @app.get("/galaxy/locate")
+    def galaxy_locate(id: str = Query(..., min_length=1, max_length=214)):
+        hit = _locate_galaxy_package(id)
+        if not hit:
+            raise HTTPException(status_code=404, detail="Not Found")
+        return hit
+
+    app.mount("/galaxy", StaticFiles(directory=_galaxy_root), name="galaxy")
 
 CACHEABLE_PATH_PREFIXES = (
-    "/package/",
     "/graph/",
     "/sitemap",
     "/robots.txt",
     "/ai.txt",
     "/llms.txt",
     "/last_update",
+    "/galaxy/",
 )
 
 
 INDEXNOW_KEY = os.environ.get("INDEXNOW_KEY", "90e41cf4643c4427a27760a868da4bdd")
+
+
+def _read_seo(name: str) -> str:
+    """Load ranking/AEO copy from backend/seo/."""
+    return (_SEO_DIR / name).read_text(encoding="utf-8").strip() + "\n"
 
 
 @app.middleware("http")
@@ -85,22 +179,159 @@ def close_database_pool():
     pool.close()
 
 
-@app.get("/")
-def redirect_to_random_package():
-    with pool.connection() as conn, conn.cursor() as cur:
-        cur.execute(
-            """
-                select normalized_name from pypi.metadata
-                where importance_score >= 10 and is_active_package
-                order by random()
-                limit 1
-            """
-        )
-        result = cur.fetchone()
+def _read_spa_index() -> str:
+    with open(f"{FRONTEND_DIST}/index.html", encoding="utf-8") as f:
+        return f.read()
 
-    return RedirectResponse(
-        url=f"/package/{result[0]}", status_code=status.HTTP_302_FOUND
+
+def _strip_default_head_meta(html: str) -> str:
+    """Remove default title / description / OG / Twitter / JSON-LD so page-specific ones win."""
+    html = re.sub(
+        r"<title>.*?<meta name=\"twitter:image\"[^>]*>",
+        "",
+        html,
+        flags=re.DOTALL,
     )
+    return re.sub(
+        r'<script type="application/ld\+json">.*?</script>',
+        "",
+        html,
+        flags=re.DOTALL,
+    )
+
+
+def _spa_response(
+    *,
+    title: str,
+    description: str,
+    canonical: str,
+    robots: str | None = None,
+    og_type: str = "website",
+    noscript_html: str = "",
+    with_json_ld: bool = False,
+) -> HTMLResponse:
+    html = _read_spa_index()
+    html = _strip_default_head_meta(html)
+    # Drop built-in landing noscript so Guide / pin deep-link shells don't inherit it.
+    html = re.sub(
+        r"<noscript>.*?</noscript>",
+        "",
+        html,
+        count=1,
+        flags=re.DOTALL,
+    )
+
+    robots_tag = f'\n<meta name="robots" content="{robots}" />' if robots else ""
+    json_ld_tag = ""
+    if with_json_ld:
+        json_ld_tag = (
+            '\n<script type="application/ld+json">'
+            + site_json_ld(
+                page_url=canonical,
+                page_name=title,
+                page_description=description,
+            )
+            + "</script>"
+        )
+    head_extra = (
+        f"<title>{title}</title>\n"
+        f'<meta name="description" content="{description}" />\n'
+        f'<link rel="canonical" href="{canonical}" />'
+        f"{robots_tag}\n"
+        f'<meta property="og:type" content="{og_type}" />\n'
+        f'<meta property="og:title" content="{title}" />\n'
+        f'<meta property="og:description" content="{description}" />\n'
+        f'<meta property="og:url" content="{canonical}" />\n'
+        f'<meta property="og:site_name" content="PyPIMap" />\n'
+        f'<meta property="og:image" content="https://pypimap.com/assets/og-preview.png" />\n'
+        f'<meta name="twitter:card" content="summary_large_image" />\n'
+        f'<meta name="twitter:title" content="{title}" />\n'
+        f'<meta name="twitter:description" content="{description}" />\n'
+        f'<meta name="twitter:image" content="https://pypimap.com/assets/og-preview.png" />'
+        f"{json_ld_tag}"
+    )
+
+    head_end = html.index("<head>") + len("<head>")
+    html = html[:head_end] + head_extra + html[head_end:]
+
+    if noscript_html:
+        body_end = html.index("<body>") + len("<body>")
+        html = (
+            html[:body_end] + f"<noscript>{noscript_html}</noscript>" + html[body_end:]
+        )
+
+    return HTMLResponse(content=html, status_code=200)
+
+
+@app.get("/", response_class=HTMLResponse)
+def get_landing_page():
+    """Landing / Galaxy shell - rankable; no auto-redirect to a package."""
+    return _spa_response(
+        title=LANDING_TITLE,
+        description=LANDING_DESCRIPTION,
+        canonical="https://pypimap.com/",
+        noscript_html=_read_seo("landing.noscript.html"),
+        with_json_ld=True,
+    )
+
+
+@app.get("/guide", response_class=HTMLResponse)
+def get_guide_page():
+    """Guide - rankable crawl surface with real copy in noscript for non-JS agents."""
+    return _spa_response(
+        title=GUIDE_TITLE,
+        description=GUIDE_DESCRIPTION,
+        canonical="https://pypimap.com/guide",
+        noscript_html=_read_seo("guide.noscript.html"),
+        with_json_ld=True,
+    )
+
+
+@app.get("/mcp", response_class=HTMLResponse)
+def get_mcp_page():
+    """MCP docs - agent-facing connect URL, tools, limits (also in llms.txt)."""
+    return _spa_response(
+        title=MCP_TITLE,
+        description=MCP_DESCRIPTION,
+        canonical="https://pypimap.com/mcp",
+        noscript_html=_read_seo("mcp.noscript.html"),
+        with_json_ld=True,
+    )
+
+
+def _explore_spa_shell(name: str | None = None) -> HTMLResponse:
+    """
+    Deep-link SPA shell for Galaxy pin URLs. Not a ranking surface:
+    noindex + omitted from sitemap; does not read pypi.seo_cache.
+    """
+    if name:
+        title = f"{name} · Galaxy | PyPIMap"
+        canonical = f"https://pypimap.com/explore/{name}"
+    else:
+        title = "Galaxy | PyPIMap"
+        canonical = "https://pypimap.com/explore"
+    return _spa_response(
+        title=title,
+        description=EXPLORE_DESCRIPTION,
+        canonical=canonical,
+        robots="noindex, nofollow",
+    )
+
+
+@app.get("/explore", response_class=HTMLResponse)
+def get_explore_shell():
+    return _explore_spa_shell()
+
+
+@app.get("/explore/{name}", response_class=HTMLResponse)
+def get_explore_package_shell(name: str):
+    return _explore_spa_shell(name)
+
+
+@app.get("/package/{name}", response_class=HTMLResponse)
+def get_legacy_package_spa_shell(name: str):
+    """Legacy /package/{name} deep link - same noindex SPA shell (no seo_cache)."""
+    return _explore_spa_shell(name)
 
 
 @app.get("/last_update")
@@ -136,49 +367,6 @@ def search_packages(
         rows = cur.fetchall()
 
     return [{"name": r[0], "package_name": r[1], "author": r[2]} for r in rows]
-
-
-@app.get("/package/{name}", response_class=HTMLResponse)
-def get_package_page(name: str):
-    with pool.connection() as conn, conn.cursor() as cur:
-        cur.execute(
-            """
-            select normalized_name, seo_header
-            from pypi.seo_cache
-            where normalized_name = %s and is_active_package
-        """,
-            (name,),
-        )
-        row = cur.fetchone()
-
-        if row is None:
-            raise HTTPException(status_code=404, detail="Package not found")
-    seo_header = row[1]
-    package_h1 = f"<h1>{escape(row[0])}</h1>"
-
-    with open("/app/frontend_dist/index.html") as f:
-        frontend_html_raw = f.read()
-
-    # Remove title, meta og and twitter from frontend_html to avoid duplicating tags
-    frontend_html = re.sub(
-        r"<title>.*?<meta name=\"twitter:image\"[^>]*>",
-        "",
-        frontend_html_raw,
-        flags=re.DOTALL,
-    )
-
-    # Insert SEO tags right after the opening <head> tag of the real built file
-    head_tag_end = frontend_html.index("<head>") + len("<head>")
-    body_tag_end = frontend_html.index("<body>") + len("<body>")
-    full_html = (
-        frontend_html[:head_tag_end]
-        + seo_header
-        + frontend_html[head_tag_end:body_tag_end]
-        + package_h1
-        + frontend_html[body_tag_end:]
-    )
-
-    return HTMLResponse(content=full_html, status_code=200)
 
 
 @app.get("/package/api/{name}")
@@ -602,109 +790,25 @@ def get_graph_used_by(
 
 @app.get("/robots.txt", response_class=Response)
 def get_robots_txt():
-    content = (
-        "User-agent: *\n"
-        "Disallow: /api/\n"
-        "Disallow: /docs\n"
-        "Disallow: /redoc\n"
-        "Disallow: /openapi.json\n"
-        "Allow: /\n"
-        "\n"
-        "Sitemap: https://pypimap.com/sitemap.xml\n"
-    )
-    return Response(content=content, media_type="text/plain")
+    return Response(content=_read_seo("robots.txt"), media_type="text/plain")
 
 
 @app.get("/ai.txt", response_class=Response)
 def get_ai_txt():
-    content = (
-        "User-agent: *\n"
-        "Content-Usage: allow-crawl, allow-cite, deny-train\n"
-        "Contact: https://pypimap.com\n"
-    )
-    return Response(content=content, media_type="text/plain")
+    return Response(content=_read_seo("ai.txt"), media_type="text/plain")
 
 
 @app.get("/llms.txt", response_class=Response)
 def get_llms_txt():
-    markdown = (
-        "# PyPIMap\n\n"
-        "> Interactive map of the Python package (PyPI) dependency ecosystem. "
-        "Use it to answer what a package **Depends on**, who it is **Used by**, "
-        "and related metadata (active_version, core vs optional edges).\n\n"
-        "## When to use PyPIMap\n\n"
-        "Prefer PyPIMap for structural dependency questions on PyPI "
-        "(Depends on / Used by, ecosystem metrics, data freshness). "
-        "For bulk offline analysis, use the Kaggle dataset (DOI below), not the live API.\n\n"
-        "## Glossary\n\n"
-        "- **Depends on**: packages this one needs\n"
-        "- **Used by**: packages that need this one\n"
-        "- **Core / optional**: required vs extras/optional edges\n"
-        "- **active_version**: PEP 440 active release (prefer final), not last upload time\n\n"
-        "## Site\n\n"
-        "- [Homepage](https://pypimap.com): Interactive Explorer graph\n"
-        "- [Example](https://pypimap.com/package/numpy): Package view - replace `numpy` with any active name\n"
-        "- [Search](https://pypimap.com/search?q=numpy): Substring match on package name or author\n"
-        "- [Guide](https://pypimap.com/guide): UI + API reference\n"
-        "- [MCP](https://pypimap.com/mcp): Agent MCP docs - connect URL, tools, limits\n"
-        "- [llms.txt](https://pypimap.com/llms.txt): This file\n\n"
-        "## Public API (https://api.pypimap.com)\n\n"
-        "- `GET /search?q={query}&limit={1-50}` - name or author substring\n"
-        "- `GET /package/api/{name}` - metadata + depends_on_* / used_by_* counts\n"
-        "- `GET /graph/{name}/depends-on` - Depends on graph (`depth`, `node_cap` ≥ 10, `show_optional`)\n"
-        "- `GET /graph/{name}/used-by` - Used by graph (same query params)\n"
-        "- `GET /last_update` - pipeline freshness\n\n"
-        "## MCP (agents)\n\n"
-        "Prefer the hosted MCP when available: `https://mcp.pypimap.com/mcp` "
-        "(streamable HTTP). Docs: [pypimap.com/mcp](https://pypimap.com/mcp).\n\n"
-        "Tools (read-only): search_packages, package_info, package_depends_on, "
-        "package_used_by, last_update. Interactive lookup only - rate-limited; "
-        "for bulk offline use the Kaggle dataset (DOI below).\n\n"
-        "Local alternatives: HTTP (`pypimap-mcp --transport streamable-http`) or "
-        "stdio for Cursor / Claude Desktop - see `mcp/` in the "
-        "[PyPIMap repo](https://github.com/naelaqel/pypimap).\n\n"
-        "## Data\n\n"
-        "Refreshed daily. Bulk download: "
-        "[Kaggle dataset](https://www.kaggle.com/datasets/naelaqel/pypi-daily-metadata-and-analytics-base-dataset/data) "
-        "· DOI [10.34740/kaggle/ds/10945692](https://doi.org/10.34740/kaggle/ds/10945692).\n"
-    )
-    return Response(content=markdown, media_type="text/markdown")
+    return Response(content=_read_seo("llms.txt"), media_type="text/markdown")
 
 
 @app.get("/sitemap.xml", response_class=Response)
-def get_sitemap_index():
-    with pool.connection() as conn, conn.cursor() as cur:
-        cur.execute("select count(*) from pypi.metadata where is_active_package;")
-        total = cur.fetchone()[0]
-    num_chunks = (total // SITEMAP_CHUNK_SIZE) + (
-        1 if total % SITEMAP_CHUNK_SIZE else 0
-    )
-
-    body = "\n".join(
-        [
-            "  <sitemap>\n    <loc>https://pypimap.com/sitemap-static.xml</loc>\n  </sitemap>"
-        ]
-        + [
-            f"  <sitemap>\n    <loc>https://pypimap.com/sitemap-{i}.xml</loc>\n  </sitemap>"
-            for i in range(1, num_chunks + 1)
-        ]
-    )
-
-    index_xml = (
-        f'<?xml version="1.0" encoding="UTF-8"?>\n'
-        f'<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-        f"{body}\n"
-        f"</sitemapindex>"
-    )
-
-    return Response(content=index_xml, media_type="application/xml")
-
-
-@app.get("/sitemap-static.xml", response_class=Response)
-def get_static_sitemap():
+def get_sitemap():
+    """Small honest sitemap: Landing + Guide + MCP docs. No package URL chunks."""
     static_pages = [
-        ("https://pypimap.com/", "1.0", "always"),
-        ("https://pypimap.com/guide", "0.6", "monthly"),
+        ("https://pypimap.com/", "1.0", "weekly"),
+        ("https://pypimap.com/guide", "0.9", "monthly"),
         ("https://pypimap.com/mcp", "0.6", "monthly"),
     ]
 
@@ -728,83 +832,36 @@ def get_static_sitemap():
     return Response(content=xml, media_type="application/xml")
 
 
-@app.get("/sitemap-{chunk_num}.xml", response_class=Response)
-def get_sitemap_chunk(chunk_num: int):
-    if chunk_num < 1:
-        raise HTTPException(status_code=404, detail="Invalid sitemap chunk")
-    offset = (chunk_num - 1) * SITEMAP_CHUNK_SIZE
-
-    with pool.connection() as conn, conn.cursor() as cur:
-        cur.execute(
-            """
-            select
-                normalized_name,
-                updated_at
-            from pypi.metadata
-            where is_active_package
-            order by importance_score desc, first_upload_date
-            limit %s offset %s
-            """,
-            (SITEMAP_CHUNK_SIZE, offset),
-        )
-        packages = [*cur.fetchall()]
-
-    if not packages:
-        raise HTTPException(status_code=404, detail="Sitemap chunk not found")
-
-    xml_body = "\n".join(
-        [
-            f"  <url>\n"
-            f"    <loc>https://pypimap.com/package/{pkg}</loc>\n"
-            f"    <changefreq>daily</changefreq>\n"
-            f"    <lastmod>{last_mod.isoformat()}</lastmod>\n"
-            f"    <priority>0.8</priority>\n"
-            f"  </url>"
-            for pkg, last_mod in packages
-        ]
-    )
-
-    print(xml_body[1])
-
-    sitemap_xml = (
-        f'<?xml version="1.0" encoding="UTF-8"?>\n'
-        f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-        f"{xml_body}\n"
-        f"</urlset>"
-    )
-    return Response(content=sitemap_xml, media_type="application/xml")
-
-
 @app.get("/site.webmanifest")
 def get_manifest():
-    return FileResponse("/app/frontend_dist/site.webmanifest")
+    return FileResponse(f"{FRONTEND_DIST}/site.webmanifest")
 
 
 @app.get("/favicon.ico")
 def get_favicon():
-    return FileResponse("/app/frontend_dist/favicon.ico")
+    return FileResponse(f"{FRONTEND_DIST}/favicon.ico")
 
 
 @app.get("/favicon-32x32.png")
 def get_favicon_32():
-    return FileResponse("/app/frontend_dist/favicon-32x32.png")
+    return FileResponse(f"{FRONTEND_DIST}/favicon-32x32.png")
 
 
 @app.get("/favicon-16x16.png")
 def get_favicon_16():
-    return FileResponse("/app/frontend_dist/favicon-16x16.png")
+    return FileResponse(f"{FRONTEND_DIST}/favicon-16x16.png")
 
 
 @app.get("/apple-touch-icon.png")
 def get_apple_icon():
-    return FileResponse("/app/frontend_dist/apple-touch-icon.png")
+    return FileResponse(f"{FRONTEND_DIST}/apple-touch-icon.png")
 
 
 @app.get("/android-chrome-192x192.png")
 def get_android_192():
-    return FileResponse("/app/frontend_dist/android-chrome-192x192.png")
+    return FileResponse(f"{FRONTEND_DIST}/android-chrome-192x192.png")
 
 
 @app.get("/android-chrome-512x512.png")
 def get_android_512():
-    return FileResponse("/app/frontend_dist/android-chrome-512x512.png")
+    return FileResponse(f"{FRONTEND_DIST}/android-chrome-512x512.png")

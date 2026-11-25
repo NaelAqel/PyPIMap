@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+Allow: /guide
+Allow: /mcp
+Disallow: /explore
+Disallow: /explore/
+Disallow: /package/
+Disallow: /search
+Disallow: /graph/
+Disallow: /package/api/
+Disallow: /galaxy/
+Disallow: /docs
+Disallow: /redoc
+Disallow: /openapi.json
+
+Sitemap: https://pypimap.com/sitemap.xml

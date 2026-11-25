@@ -1,0 +1,7 @@
+User-agent: *
+Content-Usage: allow-crawl, allow-cite, deny-train
+Contact: https://pypimap.com
+
+# Prefer ranking pages: / , /guide , /mcp.
+# Prefer structured data via the public JSON API, /mcp, and llms.txt -
+# not per-package HTML app URLs (/explore/{name}, /package/{name}).

@@ -24,7 +24,7 @@ PyPiMap's data is refreshed daily through an automated ETL pipeline.
 
 ## Credits
 
-The planned **Galaxy** overview (zoomable package point-cloud → Explorer) is inspired by [Open Model Family Tree / Model Galaxy](https://github.com/h9-tec/model-family-tree). PyPIMap maps PyPI **dependencies**, not model lineage — different graph and layout; we reuse the interaction feel.
+The planned **Galaxy** overview (zoomable package point-cloud → Explorer) is inspired by [Open Model Family Tree / Model Galaxy](https://github.com/h9-tec/model-family-tree). PyPIMap maps PyPI **dependencies**, not model lineage - different graph and layout; we reuse the interaction feel.
 
 ## Features
 
@@ -43,7 +43,7 @@ The planned **Galaxy** overview (zoomable package point-cloud → Explorer) is i
 - **Backend:** FastAPI, PostgreSQL    
 - **Pipeline:** DuckDB and PostgreSQL-based ETL pipeline, orchestrated through scheduled jobs
 - **Infrastructure:** Hetzner hosting with Cloudflare for DNS, proxying, and edge delivery.
-- **MCP:** read-only tools over the public API — docs at `/mcp`, package in [`mcp/`](./mcp/README.md)
+- **MCP:** read-only tools over the public API - docs at `/mcp`, package in [`mcp/`](./mcp/README.md)
 
 ## MCP (agents)
 
@@ -103,7 +103,7 @@ When the ETL builds each package’s current row in `pypi.metadata`, two fields 
 6. A version **without** `.dev` sorts after one with `.dev` at the same base ([PEP 440 developmental releases](https://peps.python.org/pep-0440/#developmental-releases)).
 7. Tie-break only: newer `upload_date`, then `inserted_at`.
 
-So a newer-dated backport or `.dev` upload can update `last_upload_date` without changing `active_version`. Dependency edges for the package use `requires_dist` from the PEP 440–selected version.
+So a newer-dated backport or `.dev` upload can update `last_upload_date` without changing `active_version`. Dependency edges for the package use `requires_dist` from the PEP 440-selected version.
 
 
 ## Data Sources & Attribution

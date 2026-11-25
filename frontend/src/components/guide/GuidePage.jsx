@@ -92,11 +92,11 @@ function GuidePage() {
               center) - the package you're currently viewing.
             </li>
             <li>
-              <strong className="text-white">Depends on</strong> (blue) —
+              <strong className="text-white">Depends on</strong> (blue) -
               packages the focused package needs.
             </li>
             <li>
-              <strong className="text-white">Used by</strong> (orange) —
+              <strong className="text-white">Used by</strong> (orange) -
               packages that need the focused package.
             </li>
             <li>

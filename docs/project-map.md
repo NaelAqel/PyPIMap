@@ -19,7 +19,7 @@ The application has four main subsystems:
 
 The primary maintainer is a data analytics engineer. The pipeline and SQL layers therefore contain much of the project's domain expertise and deliberate optimization work. They should be treated as core product infrastructure rather than incidental data-loading scripts.
 
-The pipeline is designed to perform expensive work once—BigQuery extraction, cleaning, PEP 503 normalization, active-package verification, historical aggregation, and dependency graph compilation—so the web application and external analytics consumers can use compact, precomputed outputs. Changes should preserve incremental processing, columnar Parquet operations, set-based SQL, and reusable graph vectors unless measurements justify a different design.
+The pipeline is designed to perform expensive work once-BigQuery extraction, cleaning, PEP 503 normalization, active-package verification, historical aggregation, and dependency graph compilation-so the web application and external analytics consumers can use compact, precomputed outputs. Changes should preserve incremental processing, columnar Parquet operations, set-based SQL, and reusable graph vectors unless measurements justify a different design.
 
 ## End-to-end architecture
 
@@ -283,7 +283,7 @@ Start with these files according to the task:
 
 ## Current product gate
 
-Next implementation cycle: **Website MVP / Galaxy + related cleanups** (`docs/product-specs.md` §3, `docs/git.md`) — prepare in one effort, **one production release** when ready. **SEO redesign is out of that cycle** (later dedicated batch). Hosted MCP is on `feature/hosted-mcp` (stdio + HTTP + `/mcp` docs + Compose/Caddy); go-live needs DNS `mcp.pypimap.com` + deploy. Prefer `.tools/ripwire` when orienting.
+Next implementation cycle: **Website MVP / Galaxy + demo** (`docs/product-specs.md` §3, `docs/git.md`) - one effort, **one production release** when ready. **SEO redesign is out of that cycle**. **Hosted MCP is done** (`mcp.pypimap.com/mcp`, `/mcp` docs; on `dev` / live; promote to `main` with that release). Staging domains not pursuing for now. Prefer `.tools/ripwire` when orienting.
 
 ## Ripwire workflow
 

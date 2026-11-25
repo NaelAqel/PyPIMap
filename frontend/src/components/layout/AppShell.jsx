@@ -72,7 +72,7 @@ function AppShell() {
         </Suspense>
       )}
 
-      {/* Left panel: brand, search, breadcrumbs, checkbox — all in one column */}
+      {/* Left panel: brand, search, breadcrumbs, checkbox - all in one column */}
       <div className="absolute top-4 left-4 z-10 pointer-events-auto flex flex-col gap-4 w-[280px] bg-slate-900/90 backdrop-blur-sm rounded-lg p-4 text-white border border-slate-600 shadow-lg">
         <div>
           <div className="text-lg font-bold">PyPiMap</div>
@@ -105,7 +105,7 @@ function AppShell() {
             Dataset DOI
           </a>
           <p className="text-[10px] text-slate-500 mt-2">
-            Last record at: {lastUpdateDate || "—"} UTC
+            Last record at: {lastUpdateDate || "-"} UTC
           </p>
         </div>
 

@@ -87,7 +87,7 @@ export function useGraphData() {
       setError({
         type: "warning",
         message:
-          "Graph limit reached — double-click a node to focus and explore further.",
+          "Graph limit reached - double-click a node to focus and explore further.",
       });
       return { empty: true };
     }
@@ -100,7 +100,7 @@ export function useGraphData() {
         show_optional: true,
       });
 
-      // drop the echoed root (the clicked node itself) — we already have it on screen
+      // drop the echoed root (the clicked node itself) - we already have it on screen
       const newNodes = result.nodes.filter((n) => n.direction !== "root");
       const newEdges = result.edges;
 
@@ -140,7 +140,7 @@ export function useGraphData() {
       setError({
         type: "warning",
         message:
-          "Graph limit reached — try focusing on a more specific package.",
+          "Graph limit reached - try focusing on a more specific package.",
       });
       return;
     }

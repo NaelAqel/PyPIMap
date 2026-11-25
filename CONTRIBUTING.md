@@ -78,7 +78,7 @@ When working on the pipeline, make sure generated data and pipeline changes are 
 
 ## Local Frontend Development (Hot Reload)
 
-The default Docker setup serves a **production build** of the frontend — code changes won't reflect live in that container.
+The default Docker setup serves a **production build** of the frontend - code changes won't reflect live in that container.
 
 For local development with hot-reload:
 

@@ -2,7 +2,7 @@
 
 Read-only [Model Context Protocol](https://modelcontextprotocol.io/) server over the public PyPIMap API.
 
-Product docs (connect URL, tools, limits): [pypimap.com/mcp](https://pypimap.com/mcp) — same page as frontend route `/mcp`.
+Product docs (connect URL, tools, limits): [pypimap.com/mcp](https://pypimap.com/mcp) - same page as frontend route `/mcp`.
 
 Does **not** talk to Postgres. Tools call `https://api.pypimap.com` (override with `PYPIMAP_API_BASE`).
 

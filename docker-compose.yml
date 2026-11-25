@@ -103,7 +103,7 @@ services:
     networks:
       - app_network
 
-  # 5. Hosted MCP (streamable HTTP) — public face at mcp.pypimap.com
+  # 5. Hosted MCP (streamable HTTP) - public face at mcp.pypimap.com
   mcp:
     build:
       context: ./mcp
@@ -127,7 +127,7 @@ services:
     networks:
       - app_network
 
-  # 6. Caddy Reverse Proxy — pypimap.com / api.pypimap.com / mcp.pypimap.com
+  # 6. Caddy Reverse Proxy - pypimap.com / api.pypimap.com / mcp.pypimap.com
   caddy:
     image: caddy:alpine
     container_name: caddy_proxy

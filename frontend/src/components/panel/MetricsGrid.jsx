@@ -16,7 +16,7 @@ function MetricsGrid({
   used_by_core_counts,
   used_by_optional_counts,
 }) {
-  // defensively coerce null/undefined to 0 — spec requires "0" rendered, never blank
+  // defensively coerce null/undefined to 0 - spec requires "0" rendered, never blank
   const safe = (v) => (v === null || v === undefined ? 0 : v);
 
   return (

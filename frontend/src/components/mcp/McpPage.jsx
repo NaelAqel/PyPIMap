@@ -16,7 +16,7 @@ function McpPage() {
     if (metaDesc) {
       metaDesc.setAttribute(
         "content",
-        "Connect agents to PyPIMap via MCP — search packages, Depends on / Used by graphs, and freshness over the public API.",
+        "Connect agents to PyPIMap via MCP - search packages, Depends on / Used by graphs, and freshness over the public API.",
       );
     }
     return () => {
@@ -32,7 +32,7 @@ function McpPage() {
           <h1 className="text-3xl font-bold text-white">PyPIMap MCP</h1>
           <p className="text-slate-300 leading-relaxed mt-3">
             Read-only Model Context Protocol tools over the public PyPIMap API.
-            Interactive package lookup for agents — not a bulk catalog dump.
+            Interactive package lookup for agents - not a bulk catalog dump.
           </p>
         </div>
 
@@ -63,7 +63,7 @@ function McpPage() {
             <code className="text-slate-300">
               pypimap-mcp --transport streamable-http --port 8765
             </code>
-            . Stdio install remains available for Cursor / Claude Desktop — see
+            . Stdio install remains available for Cursor / Claude Desktop - see
             the{" "}
             <a
               href="https://github.com/naelaqel/pypimap/tree/main/mcp"
@@ -129,7 +129,7 @@ function McpPage() {
               <a href="/guide" className="text-sky-400 underline">
                 Guide
               </a>{" "}
-              — UI + API overview
+              - UI + API overview
             </li>
             <li>
               <a
@@ -140,13 +140,13 @@ function McpPage() {
               >
                 api.pypimap.com/docs
               </a>{" "}
-              — interactive API
+              - interactive API
             </li>
             <li>
               <a href="/llms.txt" className="text-sky-400 underline">
                 llms.txt
               </a>{" "}
-              — agent-oriented site map
+              - agent-oriented site map
             </li>
           </ul>
         </section>

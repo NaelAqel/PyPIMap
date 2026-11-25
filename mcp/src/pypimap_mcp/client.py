@@ -30,6 +30,6 @@ def get_json(path: str, params: dict[str, Any] | None = None) -> Any:
 def dataset_blurb() -> str:
     return (
         "For bulk offline use, download the PyPIMap daily dataset on Kaggle "
-        f"({KAGGLE_URL}) — DOI {DOI}. "
+        f"({KAGGLE_URL}) - DOI {DOI}. "
         "This MCP is for interactive package lookup only, not a full catalog dump."
     )

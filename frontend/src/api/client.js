@@ -29,7 +29,7 @@ export async function apiFetch(path, options = {}) {
   }
 
   if (!response.ok) {
-    // anything else non-2xx — treat as network/server error for now per spec's two-error-type model
+    // anything else non-2xx - treat as network/server error for now per spec's two-error-type model
     throw new NetworkError(
       `Request failed with status ${response.status}: ${path}`,
     );

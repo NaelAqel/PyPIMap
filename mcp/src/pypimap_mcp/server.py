@@ -1,4 +1,4 @@
-"""PyPIMap MCP — stdio or streamable-HTTP over the public API."""
+"""PyPIMap MCP - stdio or streamable-HTTP over the public API."""
 
 from __future__ import annotations
 
@@ -61,7 +61,7 @@ async def root(_: Request) -> PlainTextResponse:
         "Health: /health\n"
         "Tools: search_packages, package_info, package_depends_on, "
         "package_used_by, last_update\n"
-        "Interactive lookup only — bulk data: Kaggle DOI 10.34740/kaggle/ds/10945692\n"
+        "Interactive lookup only - bulk data: Kaggle DOI 10.34740/kaggle/ds/10945692\n"
     )
 
 

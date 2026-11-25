@@ -1,4 +1,7 @@
-# ripwire field notes v1 — one per line: <canonical-id or path> <TAB> <ISO-date> <TAB> <text> [<TAB> <HEAD sha> <TAB> <branch>]. Kept SORTED (merge-friendly union); dates are git committer-clock, not wall time; the trailing sha/branch pair is present only on provenance-stamped notes.
-get_graph_parents	2026-09-05	Parent means packages that depend on the focused package, not packages the focused package depends on.	807764449e9ed1d38bd115dd412426b0eaaaa0db	main
+# ripwire field notes v1 - one per line: <canonical-id or path> <TAB> <ISO-date> <TAB> <text> [<TAB> <HEAD sha> <TAB> <branch>]. Kept SORTED (merge-friendly union); dates are git committer-clock, not wall time; the trailing sha/branch pair is present only on provenance-stamped notes.
+demos/shipment-sandbox/frontend/src/components/galaxy/GalaxyPinPanel.jsx	2026-11-24	Explorer UI retired: Galaxy pin panel shows Depends on / Used by / meta; /explore/:pkg deep-links Galaxy+pin; no separate Explorer canvas.
+docs/product-specs.md	2026-11-21	Next product gate is Website MVP / Galaxy + related cleanups in one effort; one production release when ready. SEO redesign is a later dedicated batch - do not mix into the Galaxy branch.
+get_graph_depends_on	2026-11-21	API /graph/{name}/depends-on returns packages the focus needs. Arrow A→B means B Depends on A.
+get_graph_used_by	2026-11-21	API /graph/{name}/used-by returns packages that need the focus. Glossary: Depends on / Used by / optional (not parent/child/non_core).
 pipeline/etl.py	2026-09-05	Keep expensive collection, normalization, and graph compilation in the ETL because both the production app and the public analytics/ML dataset consume its precomputed outputs.	807764449e9ed1d38bd115dd412426b0eaaaa0db	main
-useGraphData	2026-09-05	Initial graph requests include non-core relationships; the UI toggle filters them client-side.	807764449e9ed1d38bd115dd412426b0eaaaa0db	main
+useGraphData	2026-11-21	Initial graph requests include optional (extra) relationships; the UI toggle filters them client-side. Columns/API use depends_on_* / used_by_* / optional.

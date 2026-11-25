@@ -14,7 +14,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 logger = logging.getLogger("pypimap_mcp.http")
 
 BULK_HINT = (
-    "Rate limit exceeded. This MCP is for interactive lookup only — "
+    "Rate limit exceeded. This MCP is for interactive lookup only - "
     "for bulk offline use, download the PyPIMap Kaggle dataset "
     "(DOI 10.34740/kaggle/ds/10945692)."
 )

@@ -97,24 +97,30 @@ def build(
     grid: int,
     overview_cap: int,
     pin_cap: int,
+    nodes: list | None = None,
 ) -> dict:
     t0 = time.time()
-    if not src.is_file():
-        raise SystemExit(
-            f"Missing {src} - run build_galaxy_positions first "
-            f"(or pass --from PATH)"
-        )
-
-    # Pin edges use the live API. Building neighbors.json for ~1M packages OOMs
-    # the ETL box - keep an empty stub only.
+    # Pin edges use the live API. neighbors.json is an empty stub only.
     _ = pin_cap
-    print(f"reading {src} ...", flush=True)
-    payload = json.loads(src.read_text(encoding="utf-8"))
-    raw_nodes = payload["nodes"]
-    payload.clear()
-    del payload
-    nodes = [compact_node(n) for n in raw_nodes]
-    del raw_nodes
+
+    if nodes is None:
+        if not src.is_file():
+            raise SystemExit(
+                f"Missing {src} - run build_galaxy_positions first "
+                f"(or pass --from PATH)"
+            )
+        print(f"reading {src} ...", flush=True)
+        payload = json.loads(src.read_text(encoding="utf-8"))
+        raw_nodes = payload["nodes"]
+        payload.clear()
+        del payload
+        nodes = [compact_node(n) for n in raw_nodes]
+        del raw_nodes
+    else:
+        # Already laid out from Postgres rebuild - avoid a second huge JSON parse.
+        print(f"using in-memory nodes={len(nodes)}", flush=True)
+        nodes = [compact_node(n) for n in nodes]
+
     n = len(nodes)
     if n == 0:
         raise SystemExit("no nodes")

@@ -3,7 +3,29 @@ pypimap.com {
         reverse_proxy backend:8000
     }
 
+    # Exact `/` only - path `/` alone would match every URL. Rankable shell + JSON-LD.
+    @home path_regexp ^/$
+    handle @home {
+        reverse_proxy backend:8000
+    }
+
     handle /package/* {
+        reverse_proxy backend:8000
+    }
+
+    handle /explore* {
+        reverse_proxy backend:8000
+    }
+
+    handle /guide {
+        reverse_proxy backend:8000
+    }
+
+    handle /mcp {
+        reverse_proxy backend:8000
+    }
+
+    handle /galaxy/* {
         reverse_proxy backend:8000
     }
 

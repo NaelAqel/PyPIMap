@@ -73,6 +73,9 @@ services:
       POSTGRES_POOL_MIN_SIZE: ${POSTGRES_POOL_MIN_SIZE:-1}
       POSTGRES_POOL_MAX_SIZE: ${POSTGRES_POOL_MAX_SIZE:-10}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      FRONTEND_DIST: ${FRONTEND_DIST:-/app/frontend_dist}
+      GALAXY_ARTIFACT_ROOT: ${GALAXY_ARTIFACT_ROOT:-/app/galaxy}
+      INDEXNOW_KEY: ${INDEXNOW_KEY:-90e41cf4643c4427a27760a868da4bdd}
     ports:
       - target: 8000
         published: "${API_PORT:-8000}"
@@ -80,6 +83,7 @@ services:
     volumes:
     - ./backend:/app:z
     - frontend_dist:/app/frontend_dist:ro
+    - ./pipeline/artifacts/galaxy:/app/galaxy:ro
     depends_on:
       - db_seeder
     networks:

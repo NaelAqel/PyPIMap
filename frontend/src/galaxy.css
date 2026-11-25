@@ -1,0 +1,247 @@
+/* Galaxy map surface - map stage + side card (map ends at card edge) */
+
+.galaxy-root {
+  /* ~70% of prior 24rem */
+  --galaxy-side-w: 16.8rem;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  background: transparent;
+}
+
+.galaxy-stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  /* room for shell footer over the map */
+  padding-bottom: 1.6rem;
+}
+
+.galaxy-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+
+.galaxy-canvas.dragging {
+  cursor: grabbing;
+}
+
+.galaxy-hud {
+  position: absolute;
+  top: 0.65rem;
+  left: 0.75rem;
+  z-index: 5;
+  max-width: min(22rem, 70vw);
+  pointer-events: none;
+  color: #c5d0e6;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.galaxy-hud .galaxy-error {
+  color: #f0a8a8;
+}
+
+.galaxy-toolbar {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
+.galaxy-toolbar button {
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 0.28rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(10, 16, 28, 0.88);
+  color: #e8eefc;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+
+.galaxy-toolbar button:hover {
+  border-color: rgba(110, 200, 255, 0.55);
+  background: rgba(110, 200, 255, 0.16);
+}
+
+/*
+ * Side width ~ nav search (14.5rem) + freshness "… UTC" strip + a little gap.
+ * Map stage flexes; canvas never draws under this column.
+ */
+.galaxy-side {
+  flex: 0 0 var(--galaxy-side-w);
+  width: var(--galaxy-side-w);
+  max-width: 44vw;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+  background: #0b1220;
+  color: #e8eefc;
+}
+
+.galaxy-side-card {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.85rem 0.85rem 0.55rem;
+}
+
+.galaxy-side-legend {
+  flex: 0 0 auto;
+  padding: 0.65rem 0.85rem 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.75rem;
+  color: #c5d0e6;
+  line-height: 1.5;
+}
+
+.galaxy-optional-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.55rem;
+  cursor: pointer;
+  user-select: none;
+  color: #e8eefc;
+  font-weight: 600;
+}
+
+.galaxy-optional-toggle input {
+  width: 0.9rem;
+  height: 0.9rem;
+  accent-color: #6ec8ff;
+  cursor: pointer;
+}
+
+.galaxy-side-legend > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin-bottom: 0.28rem;
+}
+
+.galaxy-side-legend > div:last-child {
+  margin-bottom: 0;
+}
+
+.galaxy-side-legend strong {
+  color: #e8eefc;
+  font-weight: 600;
+}
+
+.galaxy-swatch {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 2px;
+  flex: 0 0 auto;
+  margin-top: 0.15rem;
+}
+
+.galaxy-swatch--depends {
+  background: #6ec8ff;
+}
+
+.galaxy-swatch--used {
+  background: #9ad7a0;
+}
+
+.galaxy-swatch--optional {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  height: 0;
+  width: 0.85rem;
+  margin-top: 0.4rem;
+  border-top: 2px dashed rgba(180, 210, 240, 0.85);
+}
+
+.galaxy-swatch--pin {
+  background: #ffd27a;
+  border-radius: 999px;
+}
+
+.galaxy-side .explorer-card {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  max-height: none;
+  overflow: visible;
+}
+
+.galaxy-side .explorer-card-title {
+  color: #f1f5f9;
+}
+
+.galaxy-side .explorer-card-title--empty {
+  color: #cbd5e1;
+}
+
+.galaxy-side .explorer-card-line {
+  color: #dbe4f3;
+}
+
+.galaxy-side .explorer-card-line a {
+  color: #7dd3fc;
+}
+
+.galaxy-side .explorer-card-dates {
+  color: #b6c4db;
+}
+
+.galaxy-side .explorer-card-muted {
+  color: #9aabc8;
+}
+
+.galaxy-side--empty {
+  opacity: 1;
+}
+
+@media (max-width: 720px) {
+  .galaxy-root {
+    flex-direction: column;
+  }
+
+  .galaxy-stage {
+    flex: 1 1 auto;
+    padding-bottom: 0.35rem;
+  }
+
+  .galaxy-toolbar {
+    top: 0.4rem;
+    right: 0.4rem;
+  }
+
+  .galaxy-side,
+  .galaxy-side--sheet {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: none;
+    /* leave strip for shell footer over the sheet */
+    max-height: min(36vh, 17.5rem);
+    padding-bottom: 1.35rem;
+    border-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+  }
+
+  .galaxy-side-legend {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.75rem 0.65rem;
+  }
+}

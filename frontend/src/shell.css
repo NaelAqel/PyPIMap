@@ -1,0 +1,209 @@
+/* App shell chrome - Galaxy / Explorer / Guide (Wave A D-Shell) */
+
+.shell-root {
+  --shell-bg0: #070b14;
+  --shell-bg1: #10182a;
+  --shell-ink: #e8eefc;
+  --shell-muted: #8b9bb8;
+  --shell-accent: #6ec8ff;
+  --shell-line: rgba(255, 255, 255, 0.08);
+  --shell-nav-h: 48px;
+
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(
+    1200px 800px at 50% 40%,
+    var(--shell-bg1),
+    var(--shell-bg0)
+  );
+  color: var(--shell-ink);
+  overflow: hidden;
+}
+
+.shell-nav {
+  position: relative;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  padding: 0.45rem 0.85rem;
+  background: rgba(7, 11, 20, 0.92);
+  border-bottom: 1px solid var(--shell-line);
+  backdrop-filter: blur(8px);
+}
+
+.shell-brand {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  font-size: 1.05rem;
+  color: var(--shell-ink);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  margin-right: 0.2rem;
+  padding: 0;
+}
+
+.shell-nav-link {
+  color: var(--shell-muted);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  padding: 0.26rem 0.48rem;
+  border-radius: 6px;
+  font-size: 0.84rem;
+}
+
+.shell-nav-link:hover,
+.shell-nav-link.active {
+  color: var(--shell-ink);
+  background: rgba(110, 200, 255, 0.12);
+}
+
+.shell-nav-link.active {
+  font-weight: 600;
+}
+
+.shell-mcp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--shell-ink);
+  background: rgba(110, 200, 255, 0.1);
+  border: 1px solid rgba(110, 200, 255, 0.35);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.22rem 0.55rem;
+  border-radius: 6px;
+}
+
+.shell-mcp:hover,
+.shell-mcp.active {
+  background: rgba(110, 200, 255, 0.18);
+  border-color: rgba(110, 200, 255, 0.55);
+}
+
+.shell-mcp-icon {
+  flex: 0 0 auto;
+  opacity: 0.95;
+}
+
+.shell-ext {
+  color: var(--shell-muted);
+  font-size: 0.76rem;
+  padding: 0.18rem 0.4rem;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  text-decoration: none;
+}
+
+.shell-ext:hover {
+  border-color: var(--shell-line);
+  color: var(--shell-ink);
+}
+
+.shell-fresh {
+  display: inline-flex;
+  align-items: center;
+  color: var(--shell-muted);
+  font-size: 0.76rem;
+  line-height: 1.2;
+  padding: 0.18rem 0.4rem;
+  margin-left: 0.1rem;
+  white-space: nowrap;
+}
+
+.shell-search {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  position: relative;
+  min-width: 10rem;
+  /* Keep search roughly aligned with galaxy side card width */
+  width: min(16.8rem, 38vw);
+}
+
+.shell-main {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.shell-guide-scroll {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding-bottom: 3rem;
+}
+
+.shell-footer {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.55rem;
+  z-index: 15;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  max-width: min(36rem, calc(100vw - 18.5rem));
+  line-height: 1.35;
+  pointer-events: auto;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+}
+
+.shell-footer a {
+  color: #c5d0e6;
+  text-decoration: underline;
+}
+
+.shell-footer a:hover {
+  color: #e8eefc;
+}
+
+@media (max-width: 720px) {
+  .shell-nav {
+    gap: 0.2rem;
+    padding: 0.4rem 0.55rem 0.45rem;
+  }
+
+  .shell-brand {
+    font-size: 0.95rem;
+  }
+
+  .shell-nav-link {
+    font-size: 0.78rem;
+    padding: 0.22rem 0.36rem;
+  }
+
+  .shell-ext,
+  .shell-fresh {
+    display: none;
+  }
+
+  .shell-search {
+    flex: 1 1 auto;
+    margin-left: 0;
+    min-width: 0;
+    width: auto;
+  }
+
+  .shell-footer {
+    left: 0.4rem;
+    right: 0.4rem;
+    bottom: 0.35rem;
+    max-width: none;
+    font-size: 0.75rem;
+    pointer-events: none;
+  }
+
+  .shell-footer a {
+    pointer-events: auto;
+  }
+}

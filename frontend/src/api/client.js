@@ -1,4 +1,5 @@
-const BASE_URL = import.meta.env.VITE_API_URL;
+/** Empty string → same-origin / Vite proxy (MCP-stable path shapes). */
+const BASE_URL = import.meta.env.VITE_API_URL ?? "";
 
 export class NotFoundError extends Error {
   constructor(message) {
@@ -20,6 +21,8 @@ export async function apiFetch(path, options = {}) {
   try {
     response = await fetch(`${BASE_URL}${path}`, options);
   } catch (err) {
+    // Let AbortController timeouts / unmount cancels stay identifiable upstream
+    if (err?.name === "AbortError") throw err;
     // fetch itself throws on actual network failure (offline, DNS, CORS, timeout)
     throw new NetworkError(`Network request failed: ${err.message}`);
   }

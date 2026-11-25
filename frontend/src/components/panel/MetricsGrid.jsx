@@ -1,8 +1,8 @@
 function MetricRow({ label, coreCount, optionalCount }) {
   return (
-    <div className="text-sm text-white py-1">
-      <div className="text-slate-300">{label}</div>
-      <div className="flex gap-4 mt-0.5">
+    <div className="text-sm text-slate-100 py-1">
+      <div className="text-slate-200">{label}</div>
+      <div className="flex gap-4 mt-0.5 text-slate-300">
         <span>Core: {coreCount}</span>
         <span>Optional: {optionalCount}</span>
       </div>
@@ -16,11 +16,14 @@ function MetricsGrid({
   used_by_core_counts,
   used_by_optional_counts,
 }) {
-  // defensively coerce null/undefined to 0 - spec requires "0" rendered, never blank
-  const safe = (v) => (v === null || v === undefined ? 0 : v);
+  // null/undefined → 0; allow "-" / "…" for empty/loading card shells
+  const safe = (v) => {
+    if (v === null || v === undefined) return 0;
+    return v;
+  };
 
   return (
-    <div className="space-y-1 border-t border-slate-700 pt-2 mt-2">
+    <div className="space-y-1 border-t border-slate-500/60 pt-2 mt-2">
       <MetricRow
         label="Depends on"
         coreCount={safe(depends_on_core_counts)}

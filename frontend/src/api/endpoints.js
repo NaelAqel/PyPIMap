@@ -14,17 +14,26 @@ export async function getPackageDetails(normalizedName) {
   return apiFetch(`/package/api/${encodeURIComponent(normalizedName)}`);
 }
 
-export async function getGraphDependsOn(normalizedName, params = {}) {
-  const query = new URLSearchParams(params);
+function toQuery(params = {}) {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null) continue;
+    query.set(key, String(value));
+  }
+  return query.toString();
+}
+
+export async function getGraphDependsOn(normalizedName, params = {}, init = {}) {
   return apiFetch(
-    `/graph/${encodeURIComponent(normalizedName)}/depends-on?${query.toString()}`,
+    `/graph/${encodeURIComponent(normalizedName)}/depends-on?${toQuery(params)}`,
+    init,
   );
 }
 
-export async function getGraphUsedBy(normalizedName, params = {}) {
-  const query = new URLSearchParams(params);
+export async function getGraphUsedBy(normalizedName, params = {}, init = {}) {
   return apiFetch(
-    `/graph/${encodeURIComponent(normalizedName)}/used-by?${query.toString()}`,
+    `/graph/${encodeURIComponent(normalizedName)}/used-by?${toQuery(params)}`,
+    init,
   );
 }
 

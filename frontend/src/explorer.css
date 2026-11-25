@@ -1,0 +1,309 @@
+/* Explorer L→R one-hop - Wave B D-Explorer */
+
+.explorer-root {
+  --ex-depends: #6ec8ff;
+  --ex-used: #9ad7a0;
+  --ex-focus: #ffd27a;
+  --ex-panel-w: min(17.5rem, 92vw);
+  --ex-toolbar-h: 2.6rem;
+
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  color: #e8eefc;
+}
+
+.explorer-graph-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.explorer-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+}
+
+.explorer-canvas.dragging {
+  cursor: grabbing;
+}
+
+.explorer-tip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 40;
+  pointer-events: none;
+  max-width: 16rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.75rem;
+  color: #e8eefc;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.explorer-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  pointer-events: none;
+  color: #8b9bb8;
+  font-size: 0.9rem;
+}
+
+.explorer-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.5rem;
+  max-width: 22rem;
+  margin: 0 auto;
+}
+
+.explorer-empty-kicker {
+  color: #8b9bb8;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+
+.explorer-empty-title {
+  font-size: 1.05rem;
+  margin-bottom: 0.4rem;
+}
+
+.explorer-empty-body {
+  color: #8b9bb8;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  margin-bottom: 1.1rem;
+}
+
+.explorer-empty-body code {
+  color: #7dd3fc;
+  font-size: 0.78rem;
+}
+
+.explorer-crumbs {
+  position: absolute;
+  top: 0.55rem;
+  left: 0.65rem;
+  z-index: 8;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.35rem;
+  max-width: min(42vw, 22rem);
+  pointer-events: auto;
+}
+
+.explorer-crumbs button {
+  appearance: none;
+  border: 0;
+  background: rgba(15, 23, 42, 0.72);
+  color: #94a3b8;
+  font: inherit;
+  font-size: 0.72rem;
+  padding: 0.18rem 0.45rem;
+  border-radius: 4px;
+  cursor: pointer;
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.explorer-crumbs button:hover {
+  color: #e8eefc;
+}
+
+.explorer-crumbs button.current {
+  color: #ffd27a;
+  background: rgba(255, 210, 122, 0.12);
+}
+
+.explorer-toolbar {
+  position: absolute;
+  left: 0.65rem;
+  bottom: 0.55rem;
+  z-index: 8;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.55rem;
+  max-width: min(36rem, calc(100% - var(--ex-panel-w) - 2rem));
+  pointer-events: auto;
+}
+
+.explorer-btn {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.82);
+  color: #cbd5e1;
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 0.28rem 0.55rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.explorer-btn:hover {
+  color: #fff;
+  border-color: rgba(110, 200, 255, 0.35);
+}
+
+.explorer-btn[hidden] {
+  display: none !important;
+}
+
+.explorer-optional {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  cursor: pointer;
+  user-select: none;
+  background: rgba(15, 23, 42, 0.72);
+  padding: 0.22rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.explorer-optional input {
+  accent-color: #38bdf8;
+}
+
+.explorer-panel {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  z-index: 8;
+  width: var(--ex-panel-w);
+  max-height: calc(100% - 1.3rem);
+  overflow: auto;
+  pointer-events: auto;
+}
+
+.explorer-card {
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 1rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+}
+
+.explorer-card-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.1rem;
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.explorer-card-line {
+  margin: 0.25rem 0;
+  font-size: 0.85rem;
+  color: #cbd5e1;
+}
+
+.explorer-card-line a {
+  color: #38bdf8;
+  text-decoration: none;
+}
+
+.explorer-card-line a:hover {
+  text-decoration: underline;
+}
+
+.explorer-card-dates {
+  margin-top: 0.45rem;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  line-height: 1.45;
+}
+
+.explorer-card-muted {
+  color: #8b9bb8;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.explorer-card--loading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.explorer-card-skel {
+  height: 0.7rem;
+  border-radius: 4px;
+  background: #334155;
+  width: 70%;
+  animation: explorer-pulse 1.2s ease-in-out infinite;
+}
+
+.explorer-card-skel--lg {
+  height: 1.15rem;
+  width: 85%;
+}
+
+.explorer-card-skel--md {
+  width: 55%;
+}
+
+@keyframes explorer-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Mobile: card as bottom sheet so the graph stays usable (galaxy-dummy lesson) */
+@media (max-width: 768px) {
+  .explorer-panel--sheet,
+  .explorer-panel {
+    top: auto;
+    bottom: 3.5rem;
+    left: 0.5rem;
+    right: 0.5rem;
+    width: auto;
+    max-height: 36vh;
+  }
+
+  .explorer-card--sheet {
+    max-height: 36vh;
+    overflow: auto;
+    border-radius: 12px 12px 10px 10px;
+  }
+
+  .explorer-crumbs {
+    top: 0.45rem;
+    left: 0.45rem;
+    max-width: calc(100vw - 1rem);
+  }
+
+  .explorer-toolbar {
+    left: 0.4rem;
+    right: 0.4rem;
+    bottom: 0.4rem;
+    max-width: none;
+  }
+}

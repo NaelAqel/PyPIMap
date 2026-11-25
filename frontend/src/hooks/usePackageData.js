@@ -5,7 +5,7 @@ import { NotFoundError, NetworkError } from "../api/client";
 
 export function usePackageData() {
   const focusedPackageId = useAppStore((state) => state.focusedPackageId);
-  const addBreadcrumb = useAppStore((state) => state.addBreadcrumb);
+  const ensureExplorerCrumb = useAppStore((state) => state.ensureExplorerCrumb);
   const setError = useAppStore((state) => state.setError);
   const setFocusedPackage = useAppStore((state) => state.setFocusedPackage);
 
@@ -19,14 +19,16 @@ export function usePackageData() {
     let cancelled = false;
     setIsLoading(true);
     setLocalError(null);
+    setData(null);
 
     getPackageDetails(focusedPackageId)
       .then((result) => {
         if (cancelled) return;
         setData(result);
         setFocusedPackage(result.name, result.package_name);
+        // Rename crumb only - Explorer owns walk history
+        ensureExplorerCrumb(result.name, result.package_name);
         setIsLoading(false);
-        addBreadcrumb(focusedPackageId, result.package_name);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -46,7 +48,7 @@ export function usePackageData() {
     return () => {
       cancelled = true;
     };
-  }, [focusedPackageId, setError, setFocusedPackage, addBreadcrumb]);
+  }, [focusedPackageId, setError, setFocusedPackage, ensureExplorerCrumb]);
 
   return { data, isLoading, error };
 }

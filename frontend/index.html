@@ -10,20 +10,35 @@
       <link rel="icon" type="image/png" sizes="512x512" href="/android-chrome-512x512.png" />
       <link rel="manifest" href="/site.webmanifest" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>PyPiMap | Interactive Python Package Dependency Graph</title>
-      <meta name="description" content="Explore Python package dependencies visually. Search any PyPI package and see its full upstream and downstream ecosystem as an interactive graph." />
+      <title>PyPIMap | Interactive map of the Python package ecosystem</title>
+      <meta name="description" content="PyPIMap is an interactive map of the Python package (PyPI) dependency ecosystem. Explore what a package Depends on, who it is Used by, and related metadata - or browse the Galaxy overview of active packages." />
+      <link rel="canonical" href="https://pypimap.com/" />
       <meta property="og:type" content="website" />
-      <meta property="og:title" content="PyPiMap | Interactive Python Package Dependency Graph" />
-      <meta property="og:description" content="Explore Python package dependencies visually. Search any PyPI package and see its full upstream and downstream ecosystem." />
+      <meta property="og:title" content="PyPIMap | Interactive map of the Python package ecosystem" />
+      <meta property="og:description" content="Interactive map of the PyPI dependency ecosystem - Depends on, Used by, Galaxy overview, and public JSON API." />
       <meta property="og:url" content="https://pypimap.com/" />
-      <meta property="og:site_name" content="PyPiMap" />
+      <meta property="og:site_name" content="PyPIMap" />
       <meta property="og:image" content="https://pypimap.com/assets/og-preview.png" />
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content="PyPiMap | Interactive Python Package Dependency Graph" />
-      <meta name="twitter:description" content="Explore Python package dependencies visually as an interactive graph." />
+      <meta name="twitter:title" content="PyPIMap | Interactive map of the Python package ecosystem" />
+      <meta name="twitter:description" content="Explore PyPI Depends on / Used by relationships as an interactive map." />
       <meta name="twitter:image" content="https://pypimap.com/assets/og-preview.png" />
+      <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"https://naelaqel.com/#person","name":"Nael Aqel","url":"https://naelaqel.com","sameAs":["https://www.linkedin.com/in/naelaqel1","https://github.com/naelaqel","https://www.kaggle.com/naelaqel","https://linktr.ee/naelaqel","https://www.reddit.com/user/naelaqel","https://www.quora.com/profile/Naelaqel","https://medium.com/@naelaqel","https://www.upwork.com/freelancers/naelaqel","https://public.tableau.com/app/profile/nael.aqel"]},{"@type":"WebApplication","@id":"https://pypimap.com/#website","name":"PyPIMap","url":"https://pypimap.com","description":"Interactive map of the Python package (PyPI) dependency ecosystem - Depends on, Used by, Galaxy overview, public JSON API, and MCP.","applicationCategory":"DeveloperApplication","operatingSystem":"All","creator":{"@id":"https://naelaqel.com/#person"},"publisher":{"@id":"https://naelaqel.com/#person"},"maintainer":{"@id":"https://naelaqel.com/#person"},"codeRepository":"https://github.com/naelaqel/pypimap","license":"https://opensource.org/licenses/MIT","isBasedOn":[{"@type":"Dataset","name":"PyPI Simple API Registry Metadata","description":"Upstream package dependency metadata extracted via the official Python Packaging Authority (PyPA) Simple API.","url":"https://pypi.org/simple/"},{"@type":"Dataset","name":"PyPI Stats Download Metrics","description":"Aggregate download statistics and package usage logs sourced from PyPI Stats.","url":"https://pypistats.org/"}],"hasPart":{"@type":"Dataset","name":"PyPI Daily Package Profiles \u0026 Analytics Graph","description":"Pre-vectorized pipeline node snapshots for dependency analysis.","url":"https://www.kaggle.com/datasets/naelaqel/pypi-daily-metadata-and-analytics-base-dataset/data","identifier":"https://doi.org/10.34740/kaggle/ds/10945692","license":"https://creativecommons.org/licenses/by/4.0/","creator":{"@id":"https://naelaqel.com/#person"}}},{"@type":"WebPage","@id":"https://pypimap.com/","url":"https://pypimap.com/","name":"PyPIMap | Interactive map of the Python package ecosystem","description":"PyPIMap is an interactive map of the Python package (PyPI) dependency ecosystem. Explore what a package Depends on, who it is Used by, and related metadata - or browse the Galaxy overview of active packages.","isPartOf":{"@id":"https://pypimap.com/#website"},"about":{"@id":"https://pypimap.com/#website"},"author":{"@id":"https://naelaqel.com/#person"}}]}</script>
     </head>
     <body>
+      <noscript>
+        <h1>PyPIMap</h1>
+        <p>
+          Interactive map of the Python package (PyPI) dependency ecosystem.
+          See what a package <strong>Depends on</strong>, who it is
+          <strong>Used by</strong>, and browse the Galaxy overview.
+        </p>
+        <p>
+          <a href="/guide">Read the Guide</a> for glossary, UI help, and API.
+          Dataset DOI:
+          <a href="https://doi.org/10.34740/kaggle/ds/10945692">10.34740/kaggle/ds/10945692</a>.
+        </p>
+      </noscript>
       <div id="root"></div>
       <script type="module" src="/src/main.jsx"></script>
     </body>

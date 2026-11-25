@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useAppStore } from "../../store/appStore";
 
 const TOOLS = [
   ["search_packages", "Search by package name or author"],
@@ -8,31 +9,72 @@ const TOOLS = [
   ["last_update", "Pipeline freshness"],
 ];
 
-function McpPage() {
+const HOSTED_MCP = "https://mcp.pypimap.com/mcp";
+const API_DOCS = "https://api.pypimap.com/docs";
+const DOI_URL = "https://doi.org/10.34740/kaggle/ds/10945692";
+const KAGGLE_URL =
+  "https://www.kaggle.com/datasets/naelaqel/pypi-daily-metadata-and-analytics-base-dataset/data";
+const MCP_REPO = "https://github.com/naelaqel/pypimap/tree/main/mcp";
+
+/**
+ * Agent-facing MCP docs (sandbox). Same role as Guide: readable by humans + LLMs.
+ * @param {{ embedded?: boolean }} props
+ */
+function McpPage({ embedded = false }) {
+  const setActiveView = useAppStore((s) => s.setActiveView);
+
   useEffect(() => {
-    document.title = "MCP | PyPiMap";
+    if (embedded) return undefined;
+    const title = "MCP | PyPIMap - agent tools over the public API";
+    const desc =
+      "Connect agents to PyPIMap via MCP - search packages, Depends on / Used by graphs, and freshness over the public API.";
+    document.title = title;
     const metaDesc = document.querySelector('meta[name="description"]');
-    const original = metaDesc ? metaDesc.getAttribute("content") : null;
-    if (metaDesc) {
-      metaDesc.setAttribute(
-        "content",
-        "Connect agents to PyPIMap via MCP - search packages, Depends on / Used by graphs, and freshness over the public API.",
-      );
-    }
+    const canonical = document.querySelector('link[rel="canonical"]');
+    const originalDesc = metaDesc ? metaDesc.getAttribute("content") : null;
+    const originalCanonical = canonical
+      ? canonical.getAttribute("href")
+      : null;
+    if (metaDesc) metaDesc.setAttribute("content", desc);
+    if (canonical) canonical.setAttribute("href", "https://pypimap.com/mcp");
     return () => {
-      document.title = "PyPiMap | Interactive Python Package Dependency Graph";
-      if (metaDesc && original) metaDesc.setAttribute("content", original);
+      document.title =
+        "PyPIMap | Interactive map of the Python package ecosystem";
+      if (metaDesc && originalDesc != null)
+        metaDesc.setAttribute("content", originalDesc);
+      if (canonical && originalCanonical != null)
+        canonical.setAttribute("href", originalCanonical);
     };
-  }, []);
+  }, [embedded]);
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-200 px-6 py-12">
-      <div className="max-w-3xl mx-auto space-y-10">
+    <div
+      className={
+        embedded
+          ? "px-6 py-8 text-slate-200 max-w-3xl mx-auto"
+          : "min-h-screen bg-slate-900 text-slate-200 px-6 py-12"
+      }
+    >
+      <div className={embedded ? "space-y-10" : "max-w-3xl mx-auto space-y-10"}>
         <div>
+          <p className="text-xs uppercase tracking-wider text-slate-500 mb-2">
+            Agents
+          </p>
           <h1 className="text-3xl font-bold text-white">PyPIMap MCP</h1>
           <p className="text-slate-300 leading-relaxed mt-3">
-            Read-only Model Context Protocol tools over the public PyPIMap API.
-            Interactive package lookup for agents - not a bulk catalog dump.
+            Read-only{" "}
+            <a
+              href="https://modelcontextprotocol.io/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sky-400 underline"
+            >
+              Model Context Protocol
+            </a>{" "}
+            tools over the public PyPIMap API. Interactive package lookup for
+            agents - not a bulk catalog dump. Glossary matches the site:{" "}
+            <strong>Depends on</strong> / <strong>Used by</strong>, optional,{" "}
+            active_version.
           </p>
         </div>
 
@@ -41,15 +83,11 @@ function McpPage() {
           <ul className="list-disc list-inside text-slate-300 space-y-2">
             <li>
               <span className="text-slate-400">Docs (this page):</span>{" "}
-              <a href="/mcp" className="text-sky-400 underline">
-                pypimap.com/mcp
-              </a>
+              <code className="text-sky-300 text-sm">/mcp</code>
             </li>
             <li>
-              <span className="text-slate-400">Hosted MCP URL (when live):</span>{" "}
-              <code className="text-sky-300 text-sm">
-                https://mcp.pypimap.com/mcp
-              </code>
+              <span className="text-slate-400">Hosted MCP URL:</span>{" "}
+              <code className="text-sky-300 text-sm break-all">{HOSTED_MCP}</code>
             </li>
             <li>
               <span className="text-slate-400">Local HTTP:</span>{" "}
@@ -63,10 +101,9 @@ function McpPage() {
             <code className="text-slate-300">
               pypimap-mcp --transport streamable-http --port 8765
             </code>
-            . Stdio install remains available for Cursor / Claude Desktop - see
-            the{" "}
+            . Stdio for Cursor / Claude Desktop - see the{" "}
             <a
-              href="https://github.com/naelaqel/pypimap/tree/main/mcp"
+              href={MCP_REPO}
               target="_blank"
               rel="noopener noreferrer"
               className="text-sky-400 underline"
@@ -79,10 +116,6 @@ function McpPage() {
 
         <section>
           <h2 className="text-xl font-semibold text-white mb-2">Tools</h2>
-          <p className="text-slate-400 text-sm mb-3">
-            Glossary matches the site: <strong>Depends on</strong> /{" "}
-            <strong>Used by</strong>, optional, active_version.
-          </p>
           <table className="w-full text-sm text-left text-slate-300 border border-slate-700 rounded-lg overflow-hidden">
             <tbody>
               {TOOLS.map(([tool, desc]) => (
@@ -99,10 +132,10 @@ function McpPage() {
           <h2 className="text-xl font-semibold text-white mb-2">Limits</h2>
           <p className="text-slate-300 leading-relaxed">
             Hosted / HTTP mode rate-limits by client IP (default{" "}
-            <strong>60 requests/minute</strong>,{" "}
-            <strong>2000/day</strong>). For bulk offline analysis use the{" "}
+            <strong>60 requests/minute</strong>, <strong>2000/day</strong>). For
+            bulk offline analysis use the{" "}
             <a
-              href="https://www.kaggle.com/datasets/naelaqel/pypi-daily-metadata-and-analytics-base-dataset/data"
+              href={KAGGLE_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="text-sky-400 underline"
@@ -111,7 +144,7 @@ function McpPage() {
             </a>{" "}
             · DOI{" "}
             <a
-              href="https://doi.org/10.34740/kaggle/ds/10945692"
+              href={DOI_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="text-sky-400 underline"
@@ -126,14 +159,18 @@ function McpPage() {
           <h2 className="text-xl font-semibold text-white mb-2">Also useful</h2>
           <ul className="list-disc list-inside text-slate-300 space-y-1">
             <li>
-              <a href="/guide" className="text-sky-400 underline">
+              <button
+                type="button"
+                onClick={() => setActiveView("guide")}
+                className="text-sky-400 underline hover:text-sky-300"
+              >
                 Guide
-              </a>{" "}
-              - UI + API overview
+              </button>{" "}
+              - UI + glossary
             </li>
             <li>
               <a
-                href="https://api.pypimap.com/docs"
+                href={API_DOCS}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sky-400 underline"
@@ -150,6 +187,23 @@ function McpPage() {
             </li>
           </ul>
         </section>
+
+        <p className="text-slate-500 text-sm pt-6 border-t border-slate-800 flex flex-wrap gap-4">
+          <button
+            type="button"
+            onClick={() => setActiveView("galaxy")}
+            className="text-sky-400 underline hover:text-sky-300"
+          >
+            ← Back to Galaxy
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveView("guide")}
+            className="text-sky-400 underline hover:text-sky-300"
+          >
+            Open Guide →
+          </button>
+        </p>
       </div>
     </div>
   );

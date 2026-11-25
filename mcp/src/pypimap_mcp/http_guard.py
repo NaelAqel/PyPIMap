@@ -5,8 +5,8 @@ from __future__ import annotations
 import logging
 import time
 from collections import defaultdict, deque
+from collections.abc import Callable
 from functools import wraps
-from typing import Callable
 
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send

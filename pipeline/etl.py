@@ -40,6 +40,16 @@ def main(cwd, DB_URL, seed_only=False, recreate_tables=False):
         logger.exception("Error happened")
         raise
 
+    # Galaxy tiles AFTER package ETL succeeds.
+    # Fail-open: never raise into the package path; keep yesterday's artifacts.
+    try:
+        from pipeline.scripts.run_galaxy_post_etl import main as galaxy_post
+
+        logger.info("Galaxy post-ETL (fail-open)...")
+        galaxy_post(fail_open=True, db_url=DB_URL)
+    except Exception as ge:  # noqa: BLE001 - fail-open must not block package ETL
+        logger.warning("Galaxy post-ETL failed (fail-open; ETL still OK): %s", ge)
+
 
 if __name__ == "__main__":
     # Will get the pg info by argparse or env

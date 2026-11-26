@@ -30,9 +30,7 @@ EXPLORE_DESCRIPTION = (
 _PERSON_ID = "https://naelaqel.com/#person"
 _SITE_ID = "https://pypimap.com/#website"
 
-# Site-level graph carried over from the old seo_cache header (no FAQPage /
-# per-package SoftwareSourceCode - those were package-page theater; package
-# routes are noindex now).
+# Site-level graph for rankable shells (package routes are noindex).
 _PERSON: dict[str, Any] = {
     "@type": "Person",
     "@id": _PERSON_ID,

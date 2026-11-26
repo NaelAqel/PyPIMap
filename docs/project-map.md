@@ -38,8 +38,6 @@ flowchart TB
 
     CADDY[Caddy reverse proxy] --> API
     CADDY --> FE
-
-    ETL --> INDEXNOW[IndexNow notifications]
 ```
 
 The normal data flow is:
@@ -48,7 +46,7 @@ The normal data flow is:
 2. Package activity is validated or enriched using PyPI data.
 3. Daily data is written as partitioned Parquet files.
 4. DuckDB transforms the Parquet data and loads PostgreSQL.
-5. PostgreSQL stores current metadata, history, precomputed relationships, metrics, and SEO content.
+5. PostgreSQL stores current metadata, history, precomputed relationships, and metrics.
 6. FastAPI queries PostgreSQL and exposes package, search, and graph endpoints.
 7. The React frontend transforms API responses into an interactive graph.
 8. The same generated Parquet history is published for analytics, data-science, machine-learning, and graph-engineering use cases.
@@ -99,8 +97,8 @@ flowchart LR
 
 `Caddyfile` divides public traffic as follows:
 
-- `pypimap.com/package/*`, sitemap routes, crawler files, and the IndexNow verification file go to FastAPI.
-- Other `pypimap.com` requests go to the frontend (including `/mcp` docs).
+- `pypimap.com/` (exact), `/package/*`, `/explore*`, `/guide`, `/mcp`, `/galaxy/*`, sitemap, and crawler files go to FastAPI.
+- Other `pypimap.com` requests go to the frontend.
 - All `api.pypimap.com` requests go to FastAPI.
 - All `mcp.pypimap.com` requests go to the `mcp` service (streamable HTTP MCP).
 
@@ -130,7 +128,6 @@ flowchart LR
 - Full table recreation and migration when schemas change.
 - Incremental loading for selected processing dates.
 - Recalculation of relationships for changed and affected packages.
-- IndexNow submission for pages changed during the ETL run.
 
 The SQL files under `pipeline/sql/` contain much of the pipeline's business logic. Ripwire does not structurally parse SQL in this repository, so pipeline changes require targeted SQL searches and reads in addition to the Python call graph.
 
@@ -144,7 +141,6 @@ The PostgreSQL model is created through `pipeline/sql/pg_create_tables.sql` and 
 | `pypi.metadata_cdc` | Historical package metadata states |
 | `pypi.metadata` | Current package metadata and ecosystem metrics (`active_version` via PEP 440; `last_upload_date` via max upload time) |
 | `pypi.package_connections` | Precomputed core/optional Depends-on and Used-by IDs and counts |
-| `pypi.seo_cache` | Package-specific SEO headers and active status |
 
 `pypi.package_connections` denormalizes dependency relationships into arrays so graph endpoints can traverse precomputed IDs rather than repeatedly parsing requirement strings.
 

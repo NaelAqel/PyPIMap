@@ -17,7 +17,7 @@ const KAGGLE_URL =
 const MCP_REPO = "https://github.com/naelaqel/pypimap/tree/main/mcp";
 
 /**
- * Agent-facing MCP docs (sandbox). Same role as Guide: readable by humans + LLMs.
+ * Agent-facing MCP docs. Same role as Guide: readable by humans + LLMs.
  * @param {{ embedded?: boolean }} props
  */
 function McpPage({ embedded = false }) {

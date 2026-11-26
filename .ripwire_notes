@@ -1,7 +1,8 @@
 # ripwire field notes v1 - one per line: <canonical-id or path> <TAB> <ISO-date> <TAB> <text> [<TAB> <HEAD sha> <TAB> <branch>]. Kept SORTED (merge-friendly union); dates are git committer-clock, not wall time; the trailing sha/branch pair is present only on provenance-stamped notes.
-demos/shipment-sandbox/frontend/src/components/galaxy/GalaxyPinPanel.jsx	2026-11-24	Explorer UI retired: Galaxy pin panel shows Depends on / Used by / meta; /explore/:pkg deep-links Galaxy+pin; no separate Explorer canvas.
-docs/product-specs.md	2026-11-21	Next product gate is Website MVP / Galaxy + related cleanups in one effort; one production release when ready. SEO redesign is a later dedicated batch - do not mix into the Galaxy branch.
-get_graph_depends_on	2026-11-21	API /graph/{name}/depends-on returns packages the focus needs. Arrow A→B means B Depends on A.
-get_graph_used_by	2026-11-21	API /graph/{name}/used-by returns packages that need the focus. Glossary: Depends on / Used by / optional (not parent/child/non_core).
-pipeline/etl.py	2026-09-05	Keep expensive collection, normalization, and graph compilation in the ETL because both the production app and the public analytics/ML dataset consume its precomputed outputs.	807764449e9ed1d38bd115dd412426b0eaaaa0db	main
-useGraphData	2026-11-21	Initial graph requests include optional (extra) relationships; the UI toggle filters them client-side. Columns/API use depends_on_* / used_by_* / optional.
+docs/project-map.md	2026-11-26	Release 3 is live (Galaxy, SEO shells, MCP on main). Release 4 is cleanup only.
+frontend/src/components/galaxy/GalaxyPinPanel.jsx	2026-11-26	Pin panel shows Depends on / Used by / meta. /explore/:pkg opens Galaxy with that pin.
+get_graph_depends_on	2026-11-21	/graph/{name}/depends-on = packages the focus needs. Arrow A→B means B Depends on A.
+get_graph_used_by	2026-11-21	/graph/{name}/used-by = packages that need the focus. Terms: Depends on / Used by / optional.
+pipeline/etl.py	2026-11-26	After fill_pg, rebuild Galaxy with fail-open. Package ETL must still succeed if Galaxy fails.
+pipeline/scripts/galaxy_layout.py	2026-11-26	Hub-cluster oval layout: top Used-by hubs, BFS groups, sunflower place, light collision, stretch X. Pin edges from live /graph.
+useGraphData	2026-11-21	First graph fetch includes optional links; UI toggle filters them. API fields use depends_on_* / used_by_* / optional.

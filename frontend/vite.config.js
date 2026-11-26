@@ -33,7 +33,7 @@ function locateInSearchIndex(id) {
   }
 }
 
-/** Dev-only: serve D-Data galaxy artifacts at /galaxy/* (same contract as D-API mount). */
+/** Dev-only: serve Galaxy artifacts at /galaxy/* (same paths as production). */
 function galaxyArtifactsPlugin() {
   return {
     name: "galaxy-artifacts-static",

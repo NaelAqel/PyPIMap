@@ -1,15 +1,14 @@
 /**
- * Galaxy artifact client - D-Data contract via `/galaxy/*`
- * (Vite middleware in dev; D-API / Netlify proxy in deploy).
- * Same-origin keeps tiles working without a separate API base for map assets.
+ * Galaxy tile client via same-origin `/galaxy/*`
+ * (Vite in dev; FastAPI / Caddy in production).
  */
 
-/** Resolve a path under the galaxy mount (meta, overview, tiles, …). */
+/** Resolve a path under the galaxy mount (meta, overview, tiles, ...). */
 export function galaxyUrl(relPath) {
   let clean = String(relPath || "").trim();
   // Absolute URLs from meta (future CDN) pass through.
   if (/^https?:\/\//i.test(clean)) return clean;
-  // Normalize feel-demo / copied meta paths like "./out/tiles/overview.json"
+  // Normalize relative meta paths like "./tiles/overview.json"
   clean = clean.replace(/^\.\//, "");
   clean = clean.replace(/^out\//, "");
   clean = clean.replace(/^\//, "");
@@ -80,7 +79,7 @@ export async function loadGalaxyBoot(signal) {
 
 /**
  * Single-package map coords without downloading search_index (84MB).
- * Dev: Vite /galaxy/locate. Deploy: same path on D-API when mounted.
+ * Dev: Vite /galaxy/locate. Prod: same path on FastAPI.
  */
 export async function locateGalaxyPackage(id, signal) {
   const q = String(id || "").trim();

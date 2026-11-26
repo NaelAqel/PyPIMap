@@ -25,6 +25,7 @@ MCP_PATH = "/mcp"
 INSTRUCTIONS = (
     "Read-only PyPIMap tools for the Python package dependency ecosystem. "
     "Glossary: Depends on / Used by, optional, active_version. "
+    "importance_score = used_by_core_counts + 0.3 * used_by_optional_counts. "
     "Interactive lookup only; respect rate limits. " + dataset_blurb()
 )
 
@@ -79,7 +80,11 @@ def package_info(name: str) -> str:
     """Package metadata and metrics (GET /package/api/{name}).
 
     Fields include active_version, depends_on_* / used_by_* counts (core and optional),
-    importance_score, author, home_page, release and upload dates.
+    author, home_page, release and upload dates, and importance_score.
+
+    importance_score = used_by_core_counts + 0.3 * used_by_optional_counts
+    (higher means more packages depend on this one, with optional Used by
+    counted at 30 percent).
     """
     return _dump(get_json(f"/package/api/{name}"))
 

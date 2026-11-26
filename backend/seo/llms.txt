@@ -12,6 +12,7 @@ Prefer PyPIMap for structural dependency questions on PyPI (Depends on / Used by
 - **Used by**: packages that need this one
 - **Core / optional**: required vs extras/optional edges
 - **active_version**: PEP 440 active release (prefer final), not last upload time
+- **importance_score**: used_by_core_counts + 0.3 * used_by_optional_counts
 
 ## Site (crawl / rank)
 
@@ -36,7 +37,10 @@ Prefer the hosted MCP when available: `https://mcp.pypimap.com/mcp` (streamable 
 
 Tools (read-only): search_packages, package_info, package_depends_on, package_used_by, last_update. Interactive lookup only - rate-limited; for bulk offline use the Kaggle dataset (DOI below).
 
-Local alternatives: HTTP (`pypimap-mcp --transport streamable-http`) or stdio for Cursor / Claude Desktop - see `mcp/` in the [PyPIMap repo](https://github.com/naelaqel/pypimap).
+Connect:
+- ChatGPT / remote MCP clients: paste `https://mcp.pypimap.com/mcp` where the product asks for a remote MCP URL (streamable HTTP).
+- Cursor / Claude Desktop: stdio via `pypimap-mcp` - see `mcp/` in the [PyPIMap repo](https://github.com/naelaqel/pypimap).
+- Local HTTP test: `pypimap-mcp --transport streamable-http`.
 
 ## Data
 

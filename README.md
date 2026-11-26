@@ -8,50 +8,53 @@
 
 ## Architecture
 
-![PyPiMap architecture diagram](./docs/architecture.png)
+How the system fits together: [`docs/project-map.md`](./docs/project-map.md).
+
+(A new diagram image comes in Release 4 brand work.)
 
 ---
 
 ## What is PyPiMap?
 
-PyPiMap lets you explore the Python package ecosystem on PyPI as an interactive dependency graph.    
+PyPiMap shows PyPI packages on a **Galaxy** map. You can also open an **Explorer** graph for one package.
 
-Search for a package and explore what it depends on, what packages depend on it, how packages are connected throughout the ecosystem, and package metadata and ecosystem metrics.    
+Search or select a package to see:
 
-The graph can be clicked, dragged, expanded, and recentered to explore different parts of the dependency network.    
+- what it **Depends on**
+- what **Used by** it
+- core vs optional links
+- basic package metadata
 
-PyPiMap's data is refreshed daily through an automated ETL pipeline.
+Data updates every day. Full history is also on [Kaggle](https://www.kaggle.com/datasets/naelaqel/pypi-daily-metadata-and-analytics-base-dataset/data) (DOI [10.34740/kaggle/ds/10945692](https://doi.org/10.34740/kaggle/ds/10945692)).
 
 ## Credits
 
-The planned **Galaxy** overview (zoomable package point-cloud → Explorer) is inspired by [Open Model Family Tree / Model Galaxy](https://github.com/h9-tec/model-family-tree). PyPIMap maps PyPI **dependencies**, not model lineage - different graph and layout; we reuse the interaction feel.
+The Galaxy zoom/pin feel is inspired by [Open Model Family Tree / Model Galaxy](https://github.com/h9-tec/model-family-tree). PyPIMap is about package **dependencies**, not AI model lineage.
 
 ## Features
 
-- **Interactive dependency graph**: explore upstream and downstream package relationships visually
-- **Dependencies and dependents**: see what a package needs and what packages rely on it
-- **Core vs. optional dependencies**: toggle whether optional dependencies are included
-- **Expand in place**: explore a node's dependency network without losing the current graph
-- **Recenter / focus**: double-click a node to make it the new focus and explore from there
-- **Cluster batching**: large dependency sets are grouped into "show more" clusters instead of displaying hundreds of nodes at once
-- **Package information**: inspect package metadata and ecosystem-related metrics
-- **Daily-updated data**: package and dependency data is refreshed through an automated ETL pipeline
+- **Galaxy map** - zoom and search across many packages
+- **Explorer graph** - Depends on / Used by, core vs optional
+- **Expand / recenter** - keep exploring without losing place
+- **Package metadata** - including `importance_score` and PEP 440 `active_version`
+- **Daily ETL** - plus public Parquet / Kaggle data
+- **Hosted MCP** for AI agents: [pypimap.com/mcp](https://pypimap.com/mcp)
 
 ## Tech Stack
 
-- **Frontend:** React, Vite, Tailwind CSS, Zustand, react-force-graph-2d
-- **Backend:** FastAPI, PostgreSQL    
-- **Pipeline:** DuckDB and PostgreSQL-based ETL pipeline, orchestrated through scheduled jobs
-- **Infrastructure:** Hetzner hosting with Cloudflare for DNS, proxying, and edge delivery.
-- **MCP:** read-only tools over the public API - docs at `/mcp`, package in [`mcp/`](./mcp/README.md)
+- **Frontend:** React, Vite, Tailwind CSS, Zustand; Galaxy map + `react-force-graph-2d` (Explorer)
+- **Backend:** FastAPI, PostgreSQL
+- **Pipeline:** DuckDB + PostgreSQL ETL; Galaxy tiles after each load
+- **Infra:** Hetzner, Cloudflare, Caddy; Docker Compose or Podman Compose
+- **MCP:** [`mcp/`](./mcp/README.md) at `https://mcp.pypimap.com/mcp`
 
 ## MCP (agents)
 
-Tools mirror `search`, `package/api`, `depends-on`, `used-by`, and `last_update`.
+Tools: `search_packages`, `package_info`, `package_depends_on`, `package_used_by`, `last_update`.
 
-- **Docs:** [pypimap.com/mcp](https://pypimap.com/mcp) (local: `/mcp` on the frontend)
-- **Hosted URL (when live):** `https://mcp.pypimap.com/mcp`
-- **Local HTTP / stdio:** [`mcp/README.md`](./mcp/README.md)
+- **Docs:** [pypimap.com/mcp](https://pypimap.com/mcp)
+- **Hosted URL:** `https://mcp.pypimap.com/mcp`
+- **Local setup:** [`mcp/README.md`](./mcp/README.md)
 
 
 ## Data Pipeline

@@ -1,5 +1,5 @@
 /**
- * Galaxy map engine - Canvas 2D overview + viewport tiles (feel: demos/galaxy-dummy).
+ * Galaxy map engine - Canvas 2D overview + viewport tiles.
  * Smoothness: Full view is the only intentional fit-all; search pin does not refit.
  */
 

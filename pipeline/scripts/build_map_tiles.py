@@ -1,15 +1,14 @@
-"""Build Galaxy map tiles (overview + spatial grid) - sandbox Wave A.
+"""Build Galaxy map tiles (overview + spatial grid).
 
-Feel reference: demos/galaxy-dummy/build_map_tiles.py (1M load pattern).
-
-Expects a laid-out graph JSON (nodes with x,y + edges), typically
-pipeline/artifacts/galaxy/galaxy_graph.json from build_galaxy_positions.
+Expects a laid-out graph JSON (nodes with x,y), typically
+pipeline/artifacts/galaxy/galaxy_graph.json from build_galaxy_positions
+or an in-memory nodes list from build_galaxy_from_pg.
 
 Outputs under --out-dir/tiles/ (default: pipeline/artifacts/galaxy/tiles/):
   meta.json
   overview.json
   search_index.json
-  neighbors.json          # capped pin neighbors (demo convenience)
+  neighbors.json          # empty stub; pin edges use live /graph
   g/{tx}_{ty}.json
 
 Usage:
@@ -193,7 +192,7 @@ def build(
     neighbors_path = out_dir / "neighbors.json"
     neighbors_path.write_text("{}", encoding="utf-8")
 
-    # URLs relative to artifact root (pipeline/artifacts/galaxy/) for D-API/CDN
+    # URLs relative to artifact root (pipeline/artifacts/galaxy/)
     meta = {
         "mode": "map-tiles",
         "source": str(src.name),

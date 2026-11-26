@@ -25,7 +25,7 @@ app = FastAPI()
 
 FRONTEND_DIST = os.environ.get("FRONTEND_DIST", "/app/frontend_dist")
 _SEO_DIR = pathlib.Path(__file__).resolve().parent / "seo"
-# D-Data contract: /galaxy/* → pipeline/artifacts/galaxy/ (or GALAXY_ARTIFACT_ROOT).
+# /galaxy/* → pipeline/artifacts/galaxy/ (or GALAXY_ARTIFACT_ROOT).
 _DEFAULT_GALAXY_ROOTS = (
     os.environ.get("GALAXY_ARTIFACT_ROOT", ""),
     "/app/galaxy",
@@ -46,7 +46,7 @@ app.mount(
     name="assets",
 )
 
-# Thin static serve for Galaxy artifacts (Wave A stub; Wave B D-Galaxy consumes).
+# Static files for precomputed Galaxy tiles.
 _galaxy_root = next(
     (p for p in _DEFAULT_GALAXY_ROOTS if p and os.path.isdir(p)),
     None,

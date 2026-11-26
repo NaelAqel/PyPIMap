@@ -255,7 +255,7 @@ def run_from_pg(
         pin_cap=pin_cap,
         nodes=laid_nodes,
     )
-    # Normalize URLs for Vite / D-API mount
+    # Normalize URLs for the /galaxy mount
     meta["overview_url"] = "tiles/overview.json"
     meta["search_url"] = "tiles/search_index.json"
     meta["neighbors_url"] = "tiles/neighbors.json"

@@ -122,8 +122,10 @@ PyPiMap is built on top of:
 ```bash
   git clone https://github.com/naelaqel/pypimap.git
   cd pypimap
-  docker-compose up --build
+  docker compose up --build
 ```
+
+Same `docker-compose.yml` works with **Podman**: `podman compose up --build` (or `podman-compose`).
 
 Then open `http://localhost:3000` in your browser.
 

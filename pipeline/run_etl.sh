@@ -7,6 +7,7 @@ set -a
 source /app/prod/.env
 set +a
 
+echo "======== ETL RUN START ========"
 echo "Running ETL..."
 docker compose --profile cron run --rm pipeline python -u -m pipeline.etl
 
@@ -26,6 +27,7 @@ git add pipeline/staging/raw_data/
 
 if git diff --cached --quiet; then
     echo "No new data."
+    echo "======== ETL RUN END ========"
     exit 0
 fi
 
@@ -36,3 +38,4 @@ echo "Pushing daily_parquet_after_etl..."
 git push origin daily_parquet_after_etl
 
 echo "ETL completed successfully."
+echo "======== ETL RUN END ========"

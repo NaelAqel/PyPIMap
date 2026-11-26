@@ -8,9 +8,9 @@
 
 ## Architecture
 
-How the system fits together: [`docs/project-map.md`](./docs/project-map.md).
+![PyPIMap architecture](./docs/architecture.png)
 
-(A new diagram image comes in Release 4 brand work.)
+More detail: [`docs/project-map.md`](./docs/project-map.md).
 
 ---
 

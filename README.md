@@ -152,7 +152,6 @@ including:
 - Allowed CORS origins
 - Frontend API URL
 - Google Cloud credentials for BigQuery access
-- IndexNow configuration
 - GitHub App credentials used by the ETL pipeline
 
 Some settings are only required when running specific parts of the pipeline

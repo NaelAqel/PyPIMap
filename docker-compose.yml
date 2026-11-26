@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # 1. The PostgreSQL Database Layer
   postgres_db:

@@ -1,312 +1,195 @@
 # PyPIMap project map
 
-This document records the stable architecture, subsystem boundaries, and navigation entry points for PyPIMap. Runtime structure, dependency relationships, hotspots, and change impact should be regenerated with Ripwire rather than copied here because those facts change with the codebase.
+This file explains how the project is built and where to look in the code.
+
+For live code details (hotspots, callers), use Ripwire. Do not paste those reports here.
 
 ## Purpose
 
-PyPIMap is an interactive explorer for the Python package dependency ecosystem. It lets users search for a package, inspect package metadata, visualize packages that depend on it and packages it depends on, expand either side of the graph, and distinguish core from optional dependencies.
+PyPIMap helps people explore Python packages on PyPI.
 
-The application has four main subsystems:
+Main parts of the site:
 
-| Subsystem | Responsibility | Main locations |
+- **Galaxy** - a zoomable map of many packages. Search or click to select one.
+- **Explorer** - a graph of **Depends on** and **Used by** for the selected package.
+- **Guide** and **MCP docs** - help for people and for AI agents.
+
+| Part | What it does | Where |
 |---|---|---|
-| Frontend | Search, application state, graph transformation, visualization, and package details | `frontend/src/` |
-| Backend | FastAPI endpoints, PostgreSQL queries, graph traversal, SEO pages, and sitemaps | `backend/main.py` |
-| Pipeline | BigQuery extraction, Parquet generation, DuckDB transformations, and PostgreSQL loading | `pipeline/` |
-| Infrastructure | Container startup, persistent volumes, public routing, and HTTPS | `docker-compose.yml`, `Caddyfile` |
+| Frontend | Galaxy, Explorer, search, package info | `frontend/src/` |
+| Backend | API, database queries, HTML shells, Galaxy files | `backend/main.py` |
+| Pipeline | Daily data from BigQuery into Parquet and Postgres; Galaxy tiles | `pipeline/` |
+| MCP | Tools for AI agents over the public API | `mcp/` |
+| Infra | Docker Compose, Caddy, Cloudflare, Hetzner | `docker-compose.yml`, `Caddyfile` |
 
-## Engineering perspective
+## Engineering note
 
-The primary maintainer is a data analytics engineer. The pipeline and SQL layers therefore contain much of the project's domain expertise and deliberate optimization work. They should be treated as core product infrastructure rather than incidental data-loading scripts.
+Most hard data work lives in the pipeline and SQL.
 
-The pipeline is designed to perform expensive work once-BigQuery extraction, cleaning, PEP 503 normalization, active-package verification, historical aggregation, and dependency graph compilation-so the web application and external analytics consumers can use compact, precomputed outputs. Changes should preserve incremental processing, columnar Parquet operations, set-based SQL, and reusable graph vectors unless measurements justify a different design.
+We do heavy work once (BigQuery, cleaning, name rules, dependency lists). Then the website and the Kaggle dataset reuse that data.
 
-## End-to-end architecture
+Prefer small daily updates and clear SQL unless a measurement shows you need something else.
+
+## End-to-end flow
 
 ```mermaid
 flowchart TB
-    BQ[PyPI distribution metadata in BigQuery] --> ETL[Python and DuckDB ETL]
-    PYPI[PyPI Simple API validation] --> ETL
-    ETL --> PQ[Partitioned Parquet data]
-    PQ --> LOAD[DuckDB and PostgreSQL loaders]
-    PQ --> KAGGLE[Kaggle analytics and graph dataset]
+    BQ[PyPI data in BigQuery] --> ETL[Python and DuckDB ETL]
+    PYPI[PyPI Simple API checks] --> ETL
+    ETL --> PQ[Parquet files]
+    PQ --> LOAD[Load into PostgreSQL]
+    PQ --> KAGGLE[Kaggle dataset]
     LOAD --> DB[(PostgreSQL)]
+    ETL --> GALAXY[Galaxy layout and tiles]
+    GALAXY --> ART[pipeline/artifacts/galaxy]
 
     DB --> API[FastAPI backend]
+    ART --> API
     API --> FE[React frontend]
-    FE --> GRAPH[Force-directed dependency graph]
+    FE --> MAP[Galaxy map]
+    FE --> GRAPH[Explorer graph]
 
-    CADDY[Caddy reverse proxy] --> API
+    CADDY[Caddy] --> API
     CADDY --> FE
+    CADDY --> MCP[mcp service]
 ```
 
-The normal data flow is:
+1. ETL reads package data from BigQuery and checks which packages are active.
+2. It writes daily Parquet files under `pipeline/staging/raw_data/`.
+3. DuckDB loads data into PostgreSQL (metadata and Depends on / Used by lists).
+4. A Galaxy job rebuilds package positions and map tiles from Postgres. If Galaxy fails, the main ETL can still succeed (**fail-open**).
+5. FastAPI serves the API, HTML pages for search engines, and `/galaxy/*` files.
+6. The site opens on Galaxy. Explorer opens when you focus a package.
+7. The same Parquet files also feed the public Kaggle dataset.
 
-1. The pipeline extracts PyPI distribution metadata from BigQuery.
-2. Package activity is validated or enriched using PyPI data.
-3. Daily data is written as partitioned Parquet files.
-4. DuckDB transforms the Parquet data and loads PostgreSQL.
-5. PostgreSQL stores current metadata, history, precomputed relationships, and metrics.
-6. FastAPI queries PostgreSQL and exposes package, search, and graph endpoints.
-7. The React frontend transforms API responses into an interactive graph.
-8. The same generated Parquet history is published for analytics, data-science, machine-learning, and graph-engineering use cases.
+## Kaggle dataset
 
-## Kaggle dataset and downstream analytics
+[PyPI Daily Package Profiles & Analytics Graph](https://www.kaggle.com/datasets/naelaqel/pypi-daily-metadata-and-analytics-base-dataset) (CC BY 4.0).
 
-The pipeline also supplies [PyPI Daily Package Profiles & Analytics Graph](https://www.kaggle.com/datasets/naelaqel/pypi-daily-metadata-and-analytics-base-dataset), a CC BY 4.0 dataset refreshed daily from the latest generated data on the `daily_parquet_after_etl` branch.
+It updates from the `daily_parquet_after_etl` branch.
 
-This is not merely an export of the web application's database. It exposes two complementary products:
+- Raw files: `raw_data/year={year}/month={month}/{day}.parquet`
+- Snapshot file: `pypi_package_snapshot.parquet`
 
-- A historical raw-data layer in Hive-style partitions at `raw_data/year={year}/month={month}/{day}.parquet`.
-- An analyst-friendly package-level snapshot, `pypi_package_snapshot.parquet`, generated with DuckDB from the accumulated raw history.
+Useful fields in the snapshot:
 
-The upstream PyPIMap ETL performs the expensive collection and preprocessing: BigQuery queries, string cleaning, PEP 503 name normalization, live PyPI checks, and raw Parquet generation. The Kaggle notebook consumes those outputs and performs the final snapshot transformation.
+- stable package IDs
+- `active_version` (PEP 440; prefer a final release)
+- `last_upload_date` (latest upload time)
+- `importance_score` = core Used by + `0.3 ×` optional Used by
+- precomputed Depends on / Used by ID lists
 
-The snapshot is designed to avoid repeated structural joins and graph-compilation work. In addition to package metadata and lifecycle fields, it includes:
+## Deploy
 
-- Stable package IDs and normalized names.
-- Release counts and first/last upload timestamps (`last_upload_date` = latest upload by time).
-- Active / displayed version (`active_version`) selected by [PEP 440](https://peps.python.org/pep-0440/) ordering, preferring a final release when any exist (not by upload date). See README “Active version and upload dates”.
-- Active-package status.
-- `importance_score`, defined as core Used-by plus `0.3 ×` optional Used-by.
-- Core/optional Depends-on and Used-by counts.
-- Precomputed Depends-on and Used-by ID arrays suitable for Pandas, Polars, graph databases, graph algorithms, and machine-learning workflows.
+Production path: **Cloudflare → Caddy → Docker** on Hetzner.
 
-Primary downstream uses include package lifecycle and health analysis, ecosystem popularity and author analysis, dependency subgraph reconstruction, graph feature engineering, and graph/ML experimentation. The production web application and the public analytics dataset are therefore two consumers of the same optimized data foundation.
+- App code: `/app/prod` on branch `main`
+- ETL data copy: `/app/etl` on branch `daily_parquet_after_etl`
 
-## Deployment and startup
+Compose services: `postgres_db`, `db_seeder`, `backend`, `frontend`, `mcp`, `caddy`, `pipeline` (cron profile).
 
-`docker-compose.yml` defines the service topology:
+Caddy routing:
 
-```mermaid
-flowchart LR
-    PG[postgres_db] --> SEED[db_seeder]
-    SEED --> API[backend]
-    API --> WEB[frontend]
-    WEB --> PROXY[caddy]
-    PG --> DAILY[pipeline]
-```
-
-- `postgres_db` runs PostgreSQL and stores data in the persistent `pg_data` volume.
-- `db_seeder` runs `python -u -m pipeline.etl --seed-only` before the backend starts.
-- `backend` serves FastAPI and mounts the built frontend distribution for package-specific SEO pages and static assets.
-- `frontend` builds and serves the React/Vite application and shares its distribution through `frontend_dist`.
-- `mcp` serves hosted streamable-HTTP MCP (read-only tools over the public API).
-- `caddy` exposes HTTP/HTTPS and routes public traffic.
-- `pipeline` runs the recurring ETL workflow separately from initial database seeding.
-
-`Caddyfile` divides public traffic as follows:
-
-- `pypimap.com/` (exact), `/package/*`, `/explore*`, `/guide`, `/mcp`, `/galaxy/*`, sitemap, and crawler files go to FastAPI.
-- Other `pypimap.com` requests go to the frontend.
-- All `api.pypimap.com` requests go to FastAPI.
-- All `mcp.pypimap.com` requests go to the `mcp` service (streamable HTTP MCP).
+- These paths go to FastAPI: `/` (home only), `/package/*`, `/explore*`, `/guide`, `/mcp`, `/galaxy/*`, sitemap, crawler files
+- Other `pypimap.com` paths go to the frontend
+- `api.pypimap.com` → FastAPI
+- `mcp.pypimap.com` → MCP service
 
 ## Pipeline
 
-### Entry point
+### Start
 
-`pipeline/etl.py` is the pipeline coordinator. Its `main()` function:
+`pipeline/etl.py` runs in order:
 
-1. Extracts source data through `pipeline/scripts/etl_to_raw_data.py`, unless running in seed-only mode.
-2. Loads or migrates PostgreSQL through `pipeline/scripts/fill_pg.py`.
-3. Propagates failures instead of silently completing an unsuccessful run.
+1. Extract (`etl_to_raw_data.py`)
+2. Load into Postgres (`fill_pg.py`)
+3. Rebuild Galaxy (`run_galaxy_post_etl.py`) - fail-open
 
-### Extraction
+If extract/load fails, the run fails. If only Galaxy fails, package data is still OK.
 
-`pipeline/scripts/etl_to_raw_data.py`:
+### Extract and load
 
-- Determines which processing dates are missing.
-- Executes `pipeline/sql/bigquery.sql` against the public PyPI distribution metadata dataset.
-- Writes Zstandard-compressed Parquet data under `pipeline/staging/raw_data/year=YYYY/month=MM/DD.parquet`.
-- Uses DuckDB and `pipeline/sql/merged_to_raw_data.sql` to produce the raw daily representation used by later loading stages.
+- `etl_to_raw_data.py` + `pipeline/sql/bigquery.sql` → Parquet
+- `fill_pg.py` + SQL under `pipeline/sql/` → Postgres
+- Full recreate uses stage tables, then rename in `pg_direct_migration.sql`
 
-### PostgreSQL loading
+### Main tables
 
-`pipeline/scripts/fill_pg.py` supports:
-
-- Full table recreation and migration when schemas change.
-- Incremental loading for selected processing dates.
-- Recalculation of relationships for changed and affected packages.
-
-The SQL files under `pipeline/sql/` contain much of the pipeline's business logic. Ripwire does not structurally parse SQL in this repository, so pipeline changes require targeted SQL searches and reads in addition to the Python call graph.
-
-### Core data model
-
-The PostgreSQL model is created through `pipeline/sql/pg_create_tables.sql` and promoted from staging to production by migration SQL.
-
-| Table | Responsibility |
+| Table | Role |
 |---|---|
-| `pypi.indecies` | Stable numeric identity for normalized package names |
-| `pypi.metadata_cdc` | Historical package metadata states |
-| `pypi.metadata` | Current package metadata and ecosystem metrics (`active_version` via PEP 440; `last_upload_date` via max upload time) |
-| `pypi.package_connections` | Precomputed core/optional Depends-on and Used-by IDs and counts |
+| `pypi.indecies` | Numeric IDs for package names |
+| `pypi.metadata_cdc` | History of metadata |
+| `pypi.metadata` | Current metadata and scores |
+| `pypi.package_connections` | Depends on / Used by IDs and counts |
 
-`pypi.package_connections` denormalizes dependency relationships into arrays so graph endpoints can traverse precomputed IDs rather than repeatedly parsing requirement strings.
+The spelling `indecies` is old and kept on purpose. Rename only with a careful migration.
 
-The spelling `indecies` is an existing schema identifier. Renaming it requires a deliberate database migration and coordinated SQL/backend changes.
+### Galaxy after ETL
+
+1. `run_galaxy_post_etl.py` calls `build_galaxy_from_pg.py`
+2. Positions come from `galaxy_layout.py` (see next section)
+3. `build_map_tiles.py` writes tiles under `pipeline/artifacts/galaxy/`
+4. The graph file stores **nodes only**. Pin edges come from the live `/graph` API (not a big `neighbors.json` file)
+
+## Galaxy node placement
+
+Code: `pipeline/scripts/galaxy_layout.py`.
+
+Idea: group packages around important hubs, then place them on a soft oval shape.
+
+1. Pick the top Used-by packages as hubs (with a max count).
+2. Assign every package to a hub with BFS on core dependency links (both directions).
+3. Place hubs with a sunflower pattern. Place members near their hub the same way.
+4. Lightly push overlapping points apart inside a cluster (skip heavy full pairwise work on huge graphs).
+5. Stretch the X axis (`oval_aspect`), then center the map.
 
 ## Backend
 
-`backend/main.py` is the backend application and primary backend entry point. It currently combines application configuration, middleware, direct Psycopg database access, graph traversal, SEO rendering, sitemap generation, and static asset routes.
+Main file: `backend/main.py`.
 
-### Main endpoint groups
-
-Package and discovery endpoints:
-
-- `GET /` selects a random active package and redirects to it.
-- `GET /last_update` reports the newest package data date.
-- `GET /search?q=...` searches package names and authors.
-- `GET /package/api/{name}` returns package metadata as JSON.
-
-Graph endpoints:
-
-- `GET /graph/{name}/depends-on` returns packages the focused package needs (Depends on).
-- `GET /graph/{name}/used-by` returns packages that need the focused package (Used by).
-
-Graph requests support bounded depth, node caps, offsets, and inclusion of optional relationships. Offset-based requests power cluster pagination in the frontend.
-
-Web and SEO endpoints:
-
-- `GET /package/{name}` injects package-specific SEO markup into the built React HTML.
-- Sitemap endpoints publish static and paginated package URLs.
-- `robots.txt`, `ai.txt`, and `llms.txt` publish crawler and machine-readable guidance.
-- Manifest and favicon endpoints serve files from the built frontend distribution.
-
-The backend uses direct SQL and opens Psycopg connections in route handlers; it does not currently have an ORM or repository/service layer.
+- SEO HTML pages: `/`, `/guide`, `/mcp`
+- App links (not for Google index): `/explore`, `/explore/{name}`, `/package/{name}`
+- API: `/search`, `/package/api/{name}`, `/graph/.../depends-on`, `/graph/.../used-by`, `/last_update`
+- Small sitemap (home, Guide, MCP) plus `robots.txt`, `ai.txt`, `llms.txt`
+- `/galaxy/*` serves tile files from `GALAXY_ARTIFACT_ROOT`
 
 ## Frontend
 
-### Control flow
+- Default screen: Galaxy
+- Explorer: force graph for Depends on / Used by
+- App shell and state: `App.jsx`, `AppShell.jsx`, `appStore.js`
+- Explorer data: `useGraphData.js` → API → `GraphCanvas.jsx`
 
-```mermaid
-flowchart TB
-    APP[App.jsx] --> URL[urlSync.js]
-    APP --> SHELL[AppShell.jsx]
+## Where to start
 
-    SHELL --> STORE[appStore.js]
-    SHELL --> SEARCH[Search components]
-    SHELL --> CANVAS[GraphCanvas.jsx]
-    SHELL --> DETAILS[Package information panels]
-
-    SEARCH --> ENDPOINTS[api/endpoints.js]
-    ENDPOINTS --> CLIENT[api/client.js]
-    CLIENT --> API[FastAPI]
-
-    CANVAS --> HOOK[useGraphData.js]
-    HOOK --> ENDPOINTS
-    HOOK --> TRANSFORM[graphTransform.js]
-    TRANSFORM --> LAYOUT[treeLayout.js]
-    HOOK --> CANVAS
-```
-
-### Entry and shell
-
-- `frontend/src/App.jsx` initializes URL synchronization and renders `AppShell`.
-- `frontend/src/components/layout/AppShell.jsx` initializes the default package, loads the last-update date, handles the guide page, and composes the graph, search, package information, notifications, and onboarding UI.
-- Routing is based primarily on browser location/history rather than a full client-side router.
-
-### Shared state
-
-`frontend/src/store/appStore.js` owns shared state and actions for:
-
-- Focused package identity.
-- Breadcrumb navigation.
-- Core/optional display mode.
-- Errors and global notifications.
-- Initial/default package selection.
-
-Because many frontend components depend on this store, changes to its state or action contracts should be checked for broad impact.
-
-### API boundary
-
-- `frontend/src/api/client.js` centralizes fetch behavior and network/not-found errors.
-- `frontend/src/api/endpoints.js` exposes named operations for search, package details, last-update data, Depends-on / Used-by graph requests, and paginated graph slices.
-
-### Graph data
-
-`frontend/src/hooks/useGraphData.js` is the graph data controller:
-
-1. It fetches Depends-on and Used-by graphs concurrently when the focused package changes.
-2. It combines responses through `transformInitialGraph()`.
-3. It stores the merged graph locally and enforces a total-node limit.
-4. It expands package nodes one direction at a time.
-5. It replaces cluster nodes with offset-based result slices.
-6. It filters the loaded graph to core-only reachable nodes when the optional toggle is disabled.
-
-Initial graph requests include optional relationships. The core-only UI mode is derived client-side from the loaded graph.
-
-### Transformation and layout
-
-- `frontend/src/utils/graphTransform.js` handles deduplication, styling, cluster construction, initial merging, and expansion merging.
-- `frontend/src/utils/treeLayout.js` calculates initial outward placement and expansion branch positions.
-
-These files form the boundary between API response data and the visual graph model.
-
-### Rendering and interaction
-
-`frontend/src/components/graph/GraphCanvas.jsx` renders the graph with `react-force-graph-2d` and implements:
-
-- Single-click expansion.
-- Double-click refocusing.
-- Cluster pagination.
-- Core/optional visibility.
-- Hover highlighting.
-- Animated node appearance.
-- Subtree dragging and pinning.
-- Camera fitting and reset.
-
-`GraphCanvas.jsx` and `useGraphData.js` are the main places to inspect for user-visible graph behavior.
-
-## Navigation guide
-
-Start with these files according to the task:
-
-| Task | Start here |
+| Task | Open first |
 |---|---|
-| API route or graph traversal | `backend/main.py` |
-| ETL orchestration | `pipeline/etl.py` |
-| BigQuery-to-Parquet extraction | `pipeline/scripts/etl_to_raw_data.py` |
-| PostgreSQL loading or migrations | `pipeline/scripts/fill_pg.py`, then the relevant `pipeline/sql/` file |
-| Database schema | `pipeline/sql/pg_create_tables.sql` |
-| Shared frontend state | `frontend/src/store/appStore.js` |
-| Frontend API calls | `frontend/src/api/endpoints.js`, `frontend/src/api/client.js` |
-| Graph loading or expansion | `frontend/src/hooks/useGraphData.js` |
-| Graph data transformation | `frontend/src/utils/graphTransform.js` |
-| Graph layout | `frontend/src/utils/treeLayout.js` |
-| Graph interaction or drawing | `frontend/src/components/graph/GraphCanvas.jsx` |
-| Runtime topology | `docker-compose.yml`, `Caddyfile` |
+| API, graph, SEO pages | `backend/main.py` |
+| Daily ETL control | `pipeline/etl.py` |
+| BigQuery → Parquet | `pipeline/scripts/etl_to_raw_data.py` |
+| Postgres load | `pipeline/scripts/fill_pg.py`, `pipeline/sql/` |
+| Recreate tables | `pg_create_tables.sql`, `pg_direct_migration.sql` |
+| Galaxy layout / tiles | `galaxy_layout.py`, `build_galaxy_from_pg.py`, `build_map_tiles.py` |
+| Galaxy UI | Galaxy files under `frontend/src/` |
+| Explorer graph | `useGraphData.js`, `GraphCanvas.jsx` |
+| MCP tools | `mcp/src/pypimap_mcp/server.py` |
+| Deploy | `docker-compose.yml`, `Caddyfile`, `CONTRIBUTING.md` |
 
-## Current product gate
+## What is next
 
-Next implementation cycle: **Website MVP / Galaxy + demo** (`docs/product-specs.md` §3, `docs/git.md`) - one effort, **one production release** when ready. **SEO redesign is out of that cycle**. **Hosted MCP is done** (`mcp.pypimap.com/mcp`, `/mcp` docs; on `dev` / live; promote to `main` with that release). Staging domains not pursuing for now. Prefer `.tools/ripwire` when orienting.
+**Release 3** (2026-11-26) is live: Galaxy, SEO shells, hosted MCP on `main`.
 
-## Ripwire workflow
+**Release 4** is cleanup (IndexNow/`seo_cache` gone in code, ETL log markers, docs, MCP copy, brand assets).
 
-For a new task, retrieve durable project knowledge before mapping current code:
+## Ripwire
 
 ```bash
 .tools/ripwire . --recall="<task>"
 .tools/ripwire . --pack-task="<task>" --token-budget=10000
-```
-
-Before adding a function or class, look for the repository's established pattern:
-
-```bash
 .tools/ripwire . --exemplar="<subtask>"
-```
-
-After editing an important symbol, check its contract and callers:
-
-```bash
 .tools/ripwire . --edit-check=<symbol>
-```
-
-Before finishing, inspect change impact and quality regressions:
-
-```bash
 .tools/ripwire . --situ
 .tools/ripwire . --quality-delta
 ```
 
-Use `.ripwire_notes` for non-obvious symbol- or file-specific invariants. Do not store generated reports, hotspot values, line numbers, symbol counts, or module IDs in this document; regenerate those from the current tree.
+Put long-lived notes in `.ripwire_notes`. Do not store temporary Ripwire numbers in this file.

@@ -4,13 +4,9 @@ import re
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from psycopg_pool import ConnectionPool
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
-
 from seo.meta import (
     EXPLORE_DESCRIPTION,
     GUIDE_DESCRIPTION,
@@ -21,12 +17,15 @@ from seo.meta import (
     MCP_TITLE,
     site_json_ld,
 )
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 app = FastAPI()
 
 FRONTEND_DIST = os.environ.get("FRONTEND_DIST", "/app/frontend_dist")
 _SEO_DIR = pathlib.Path(__file__).resolve().parent / "seo"
-# D-Data contract: /galaxy/* → pipeline/artifacts/galaxy/ (or GALAXY_ARTIFACT_ROOT).
+# /galaxy/* → pipeline/artifacts/galaxy/ (or GALAXY_ARTIFACT_ROOT).
 _DEFAULT_GALAXY_ROOTS = (
     os.environ.get("GALAXY_ARTIFACT_ROOT", ""),
     "/app/galaxy",
@@ -47,7 +46,7 @@ app.mount(
     name="assets",
 )
 
-# Thin static serve for Galaxy artifacts (Wave A stub; Wave B D-Galaxy consumes).
+# Static files for precomputed Galaxy tiles.
 _galaxy_root = next(
     (p for p in _DEFAULT_GALAXY_ROOTS if p and os.path.isdir(p)),
     None,
@@ -123,9 +122,6 @@ CACHEABLE_PATH_PREFIXES = (
     "/last_update",
     "/galaxy/",
 )
-
-
-INDEXNOW_KEY = os.environ.get("INDEXNOW_KEY", "90e41cf4643c4427a27760a868da4bdd")
 
 
 def _read_seo(name: str) -> str:
@@ -302,7 +298,7 @@ def get_mcp_page():
 def _explore_spa_shell(name: str | None = None) -> HTMLResponse:
     """
     Deep-link SPA shell for Galaxy pin URLs. Not a ranking surface:
-    noindex + omitted from sitemap; does not read pypi.seo_cache.
+    noindex + omitted from sitemap.
     """
     if name:
         title = f"{name} · Galaxy | PyPIMap"
@@ -330,7 +326,7 @@ def get_explore_package_shell(name: str):
 
 @app.get("/package/{name}", response_class=HTMLResponse)
 def get_legacy_package_spa_shell(name: str):
-    """Legacy /package/{name} deep link - same noindex SPA shell (no seo_cache)."""
+    """Legacy /package/{name} deep link - same noindex SPA shell."""
     return _explore_spa_shell(name)
 
 
@@ -340,11 +336,6 @@ def get_meta():
         cur.execute("select max(last_upload_date) from pypi.metadata;")
         result = cur.fetchone()
     return {"last_updated_date": result[0]}
-
-
-@app.get(f"/{INDEXNOW_KEY}.txt", response_class=PlainTextResponse)
-def indexnow_key():
-    return INDEXNOW_KEY
 
 
 @app.get("/search")

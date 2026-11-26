@@ -5,6 +5,9 @@ Interactive package lookup for agents - not a bulk catalog dump.</p>
 Docs: <a href="/mcp">pypimap.com/mcp</a>.</p>
 <p>Tools: search_packages, package_info, package_depends_on,
 package_used_by, last_update. Glossary: Depends on / Used by,
-optional, active_version.</p>
+optional, active_version. importance_score = used_by_core_counts
++ 0.3 * used_by_optional_counts.</p>
+<p>ChatGPT / remote MCP: use https://mcp.pypimap.com/mcp (streamable HTTP).
+Cursor / Claude Desktop: stdio - see mcp/ in the GitHub repo.</p>
 <p>Rate limits (HTTP): 60/min and 2000/day per IP. Bulk offline:
 Kaggle DOI 10.34740/kaggle/ds/10945692.</p>

@@ -1,6 +1,4 @@
-"""Hub-cluster Galaxy layout (mild oval) - feel match for demos/galaxy-dummy.
-
-Ported from demos/galaxy-dummy/build_sample.py for sandbox post-ETL use.
+"""Hub-cluster Galaxy layout on a mild oval for post-ETL map tiles.
 """
 
 from __future__ import annotations

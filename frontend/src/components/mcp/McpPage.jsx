@@ -3,7 +3,10 @@ import { useAppStore } from "../../store/appStore";
 
 const TOOLS = [
   ["search_packages", "Search by package name or author"],
-  ["package_info", "Metadata + Depends on / Used by counts"],
+  [
+    "package_info",
+    "Metadata, Depends on / Used by counts, importance_score",
+  ],
   ["package_depends_on", "What the package needs (graph)"],
   ["package_used_by", "Who needs the package (graph)"],
   ["last_update", "Pipeline freshness"],
@@ -17,7 +20,7 @@ const KAGGLE_URL =
 const MCP_REPO = "https://github.com/naelaqel/pypimap/tree/main/mcp";
 
 /**
- * Agent-facing MCP docs (sandbox). Same role as Guide: readable by humans + LLMs.
+ * Agent-facing MCP docs. Same role as Guide: readable by humans + LLMs.
  * @param {{ embedded?: boolean }} props
  */
 function McpPage({ embedded = false }) {
@@ -74,7 +77,9 @@ function McpPage({ embedded = false }) {
             tools over the public PyPIMap API. Interactive package lookup for
             agents - not a bulk catalog dump. Glossary matches the site:{" "}
             <strong>Depends on</strong> / <strong>Used by</strong>, optional,{" "}
-            active_version.
+            active_version.{" "}
+            <strong>importance_score</strong> = used_by_core_counts + 0.3 *
+            used_by_optional_counts.
           </p>
         </div>
 
@@ -96,12 +101,15 @@ function McpPage({ embedded = false }) {
               </code>
             </li>
           </ul>
+          <p className="text-slate-300 text-sm mt-3 leading-relaxed">
+            <strong>ChatGPT</strong> (and other remote MCP clients): if the
+            product lets you add a remote MCP server, use streamable HTTP and
+            paste{" "}
+            <code className="text-sky-300 break-all">{HOSTED_MCP}</code>. UI
+            labels differ by plan; there is no separate PyPIMap ChatGPT plugin.
+          </p>
           <p className="text-slate-400 text-sm mt-3">
-            Local run:{" "}
-            <code className="text-slate-300">
-              pypimap-mcp --transport streamable-http --port 8765
-            </code>
-            . Stdio for Cursor / Claude Desktop - see the{" "}
+            <strong>Cursor / Claude Desktop:</strong> install stdio from the{" "}
             <a
               href={MCP_REPO}
               target="_blank"
@@ -110,6 +118,10 @@ function McpPage({ embedded = false }) {
             >
               mcp/ README
             </a>
+            . Local HTTP test:{" "}
+            <code className="text-slate-300">
+              pypimap-mcp --transport streamable-http --port 8765
+            </code>
             .
           </p>
         </section>

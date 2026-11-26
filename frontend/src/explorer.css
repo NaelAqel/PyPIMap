@@ -1,4 +1,4 @@
-/* Explorer L→R one-hop - Wave B D-Explorer */
+/* Explorer left-to-right one-hop graph */
 
 .explorer-root {
   --ex-depends: #6ec8ff;
@@ -276,7 +276,7 @@
   }
 }
 
-/* Mobile: card as bottom sheet so the graph stays usable (galaxy-dummy lesson) */
+/* Mobile: card as bottom sheet so the graph stays usable */
 @media (max-width: 768px) {
   .explorer-panel--sheet,
   .explorer-panel {

@@ -1,13 +1,11 @@
-"""Build post-ETL Galaxy positions artifact (sandbox Wave A).
-
-Feel reference: demos/galaxy-dummy/generate_galaxy_positions.py
+"""Build post-ETL Galaxy positions for map tiles.
 
 Outputs (under pipeline/artifacts/galaxy/ by default):
   galaxy_positions.json       # id → {x,y,size,importance_score}
   galaxy_positions.meta.json
-  galaxy_graph.json           # nodes+edges with x,y (input for map tiles)
+  galaxy_graph.json           # nodes with x,y (input for map tiles)
 
-Fail-open: invoke via run_galaxy_post_etl.py so package ETL is never blocked.
+Call via run_galaxy_post_etl.py so package ETL stays fail-open.
 
 Usage:
   python -m pipeline.scripts.build_galaxy_positions \\
@@ -44,7 +42,7 @@ def parse_args() -> argparse.Namespace:
     src.add_argument(
         "--from-galaxy-json",
         type=Path,
-        help="Existing galaxy sample with nodes + edges (feel-demo shape)",
+        help="Galaxy JSON with nodes and edges",
     )
     src.add_argument(
         "--synthetic",
@@ -69,7 +67,7 @@ def _load_from_galaxy_json(src: Path) -> tuple[list[dict], list[dict]]:
 
 
 def _synthetic(n: int) -> tuple[list[dict], list[dict]]:
-    """Small hub-and-spoke graph for Wave A smoke - not a 1M run."""
+    """Small hub-and-spoke graph for local smoke tests."""
     nodes = []
     edges = []
     hubs = max(4, int(math.sqrt(n)))
@@ -170,7 +168,7 @@ def build(
         "node_count": len(positions),
         "edge_count": len(edges_raw),
         "oval_aspect": oval_aspect,
-        "layout": "hub-cluster mild oval (sandbox port of galaxy-dummy)",
+        "layout": "hub-cluster mild oval",
         "layout_seconds": round(layout_s, 2),
         "bytes": pos_path.stat().st_size,
         "artifacts": {
@@ -181,8 +179,7 @@ def build(
         "fail_open": True,
         "notes": [
             "Post-ETL job; must not block package ETL (see run_galaxy_post_etl.py).",
-            "Wave A scaffold - not a full ~1M catalog run.",
-            "D-Galaxy/D-API: consume artifacts under pipeline/artifacts/galaxy/.",
+            "Artifacts are served from pipeline/artifacts/galaxy/.",
         ],
     }
     meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")

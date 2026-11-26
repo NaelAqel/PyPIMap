@@ -59,15 +59,3 @@ create table if not exists pypi.package_connections_stage (
     ,inserted_at              timestamptz not null default now()
     ,updated_at               timestamptz not null default now()
 );
-
-
--- REVAMP: seo_cache create held (commented; DROP later)
--- create seo_cache
--- drop table if exists pypi.seo_cache_stage;
--- create table if not exists pypi.seo_cache_stage (
---     normalized_name         text not null primary key
---     ,seo_header             text not null
---     ,is_active_package      bool not null
---     ,inserted_at            timestamptz not null default now()
---     ,updated_at             timestamptz not null default now()
--- );

@@ -29,6 +29,7 @@ import {
   ZOOM_LERP,
 } from "../galaxy/galaxyMapEngine";
 import GalaxyPinPanel from "../galaxy/GalaxyPinPanel";
+import GalaxyTour from "../galaxy/GalaxyTour";
 
 /** Parse live /graph one-hop nodes into galaxy edge lists (no 74MB neighbors.json). */
 function neighborsFromGraphResult(result, direction) {
@@ -944,6 +945,9 @@ function GalaxyView({ active = true }) {
           className="galaxy-canvas"
           aria-label="PyPI package Galaxy map"
         />
+
+        {/* First visit only - waits until load HUD clears */}
+        {active && !status && !error && <GalaxyTour active={active} />}
       </div>
       {active && <GalaxyPinPanel />}
     </div>

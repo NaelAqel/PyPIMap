@@ -2,9 +2,24 @@
 
 Read-only [Model Context Protocol](https://modelcontextprotocol.io/) server over the public PyPIMap API.
 
-Product docs (connect URL, tools, limits): [pypimap.com/mcp](https://pypimap.com/mcp) - same page as frontend route `/mcp`.
+Product docs: [pypimap.com/mcp](https://pypimap.com/mcp) (same as frontend `/mcp`).
 
 Does **not** talk to Postgres. Tools call `https://api.pypimap.com` (override with `PYPIMAP_API_BASE`).
+
+## Start here - pick A or B
+
+| Plug | What you do | When |
+| --- | --- | --- |
+| **A. Hosted URL** | Paste `https://mcp.pypimap.com/mcp` | The AI product has "add remote MCP" / "server URL" (streamable HTTP) |
+| **B. Local (stdio)** | Install this package and point the app at `pypimap-mcp` | The product only supports a **local** MCP server |
+
+No MCP in the product -> use the [public JSON API](https://api.pypimap.com/docs). That is the client's limit, not "MCP is down."
+
+Examples (UI labels change; not guarantees):
+
+- **ChatGPT** (when remote MCP exists) → A
+- **Cursor / Claude Desktop** → B (Claude often rejects the hosted URL)
+- **Gemini / Grok / DeepSeek / others** → A if URL field, B if local only, else API
 
 ## Tools
 
@@ -12,32 +27,50 @@ Does **not** talk to Postgres. Tools call `https://api.pypimap.com` (override wi
 | --- | --- | --- |
 | `search_packages` | `GET /search` | Package name or author substring |
 | `package_info` | `GET /package/api/{name}` | Metadata + counts + `importance_score` |
-| `package_depends_on` | `GET /graph/{name}/depends-on` | What the package needs |
-| `package_used_by` | `GET /graph/{name}/used-by` | Who needs the package |
+| `package_depends_on` | `GET /graph/{name}/depends-on` | What the package needs (dependencies, requires, imports) |
+| `package_used_by` | `GET /graph/{name}/used-by` | Who needs it (dependents, reverse deps, who uses) |
 | `last_update` | `GET /last_update` | Pipeline freshness |
 
-Glossary matches the site: **Depends on** / **Used by**, **optional**, **active_version**.
+## Glossary
 
-**importance_score** = `used_by_core_counts + 0.3 * used_by_optional_counts`  
-(higher = more packages depend on this one; optional Used by counts at 30%).
+- **Depends on** - packages this one needs (also: dependencies, requires, needs, imports)
+- **Used by** - packages that need this one (also: dependents, reverse deps, who uses)
+- **Core / optional** - required vs extras edges
+- **active_version** - PEP 440 active release (prefer final), not last upload time
+- **importance_score** = `used_by_core_counts + 0.3 * used_by_optional_counts`
+- **parent / child** - ambiguous; prefer Depends on / Used by
+
+## Short answer shape
+
+After `package_info`, prefer a compact card:
+
+```text
+**{package_name}** is an active PyPI package (version {active_version}).
+Author: {author}.
+Depends on: {depends_on_core_counts} core / {depends_on_optional_counts} optional.
+Used by: {used_by_core_counts} core / {used_by_optional_counts} optional.
+Importance: {importance_score} (used_by_core + 0.3 x used_by_optional; higher = more packages depend on this one).
+Home: {home_page}
+PyPIMap: https://pypimap.com/ (pin "{package_name}")
+API: https://api.pypimap.com/package/api/{name}
+```
+
+
+Add a short Depends on / Used by list when the question asked for that direction.
 
 Bulk offline data: [Kaggle dataset](https://www.kaggle.com/datasets/naelaqel/pypi-daily-metadata-and-analytics-base-dataset/data) · DOI [10.34740/kaggle/ds/10945692](https://doi.org/10.34740/kaggle/ds/10945692).
 
-## Connect
+## Connect details
 
-### Hosted URL (ChatGPT and other remote MCP clients)
-
-Public streamable HTTP:
+### A. Hosted URL
 
 ```text
 https://mcp.pypimap.com/mcp
 ```
 
-If your client (for example ChatGPT custom GPT / MCP connector, or another app that accepts a remote MCP URL) asks for a server URL, paste that. Use **streamable HTTP**, not stdio.
+Use **streamable HTTP**, not stdio. There is no separate PyPIMap plugin per vendor.
 
-OpenAI / ChatGPT UI changes over time. If your account has no MCP connector setting yet, use the public API or wait until remote MCP is available for your plan.
-
-### Stdio (Cursor / Claude Desktop)
+### B. Stdio (Cursor / Claude Desktop)
 
 ```bash
 cd mcp
@@ -76,3 +109,7 @@ pypimap-mcp --transport streamable-http --host 127.0.0.1 --port 8765
 Default rate limits (HTTP only): **60 req/min** and **2000 req/day** per client IP. Override with `--rate-limit-per-min` / `--rate-limit-per-day` or `PYPIMAP_MCP_RATE_PER_MIN` / `PYPIMAP_MCP_RATE_PER_DAY`.
 
 Logs go to stderr (`PYPIMAP_MCP_LOG_LEVEL`, default `INFO`).
+
+## Ops note
+
+Hosted MCP is already live (`mcp.pypimap.com` → Caddy → Docker `mcp`). Docs-only changes need a frontend/backend rebuild for `/mcp` and `llms.txt`; rebuild the `mcp` image when this package’s `INSTRUCTIONS` / tool text change. After deploy, purge Cloudflare for `/mcp` and `/llms.txt` if the edge still serves an old body.

@@ -52,9 +52,12 @@ The Galaxy zoom/pin feel is inspired by [Open Model Family Tree / Model Galaxy](
 
 Tools: `search_packages`, `package_info`, `package_depends_on`, `package_used_by`, `last_update`.
 
-- **Docs:** [pypimap.com/mcp](https://pypimap.com/mcp)
-- **Hosted URL:** `https://mcp.pypimap.com/mcp`
-- **Local setup:** [`mcp/README.md`](./mcp/README.md)
+Pick **A** or **B** (details: [pypimap.com/mcp](https://pypimap.com/mcp)):
+
+- **A. Hosted URL** (streamable HTTP): `https://mcp.pypimap.com/mcp` - when the AI product has remote MCP / server URL
+- **B. Local stdio**: install from [`mcp/README.md`](./mcp/README.md) - Cursor, Claude Desktop, and similar
+
+No MCP in the product -> use the [public JSON API](https://api.pypimap.com/docs).
 
 
 ## Data Pipeline

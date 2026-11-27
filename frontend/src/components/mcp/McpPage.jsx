@@ -178,7 +178,7 @@ function McpPage({ embedded = false }) {
 Author: {author}.
 Depends on: {depends_on_core_counts} core / {depends_on_optional_counts} optional.
 Used by: {used_by_core_counts} core / {used_by_optional_counts} optional.
-Importance: {importance_score}.
+Importance: {importance_score} (used_by_core + 0.3 x used_by_optional; higher = more packages depend on this one).
 Home: {home_page}
 PyPIMap: https://pypimap.com/ (pin "{package_name}")
 API: https://api.pypimap.com/package/api/{name}`}</pre>

@@ -107,11 +107,13 @@ function GuidePage({ embedded = false }) {
           <ul className="list-disc list-inside text-slate-300 space-y-1">
             <li>
               <strong className="text-white">Depends on</strong> - packages the
-              pinned package needs.
+              pinned package needs (also: dependencies, requires, needs,
+              imports).
             </li>
             <li>
               <strong className="text-white">Used by</strong> - packages that
-              need the pinned package.
+              need the pinned package (also: dependents, reverse deps, who
+              uses).
             </li>
             <li>
               <strong className="text-white">optional</strong> - extras / non-
@@ -269,8 +271,8 @@ function GuidePage({ embedded = false }) {
               ))}
             </tbody>
           </table>
-          <p className="text-slate-400 text-sm mt-3">
-            Agents: use{" "}
+          <p className="text-slate-400 text-sm mt-3 leading-relaxed">
+            Agents: see{" "}
             <button
               type="button"
               onClick={() => setActiveView("mcp")}
@@ -278,11 +280,12 @@ function GuidePage({ embedded = false }) {
             >
               MCP docs
             </button>{" "}
-            (<code className="text-slate-300 text-xs">/mcp</code>) or the hosted
-            endpoint{" "}
-            <code className="text-sky-300 text-xs break-all">{HOSTED_MCP}</code>
-            . Tools wrap the same API - search, package info, Depends on, Used
-            by, and last update.
+            (<code className="text-slate-300 text-xs">/mcp</code>) - pick{" "}
+            <strong className="text-slate-300">A</strong> hosted URL{" "}
+            <code className="text-sky-300 text-xs break-all">{HOSTED_MCP}</code>{" "}
+            or <strong className="text-slate-300">B</strong> local stdio. Tools
+            wrap the same API - search, package info, Depends on, Used by, and
+            last update.
           </p>
         </section>
 

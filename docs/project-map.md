@@ -156,6 +156,10 @@ Main file: `backend/main.py`.
 ## Frontend
 
 - Default screen: Galaxy
+- Galaxy map: canvas overview + tiles (`GalaxyView.jsx`, `galaxyMapEngine.js`)
+  - Wheel zoom is overview-relative (smooth lerp; zoom-out eases back to Full view)
+  - Far zoom uses LOD (fewer ambient dots); closer zoom shows more detail
+  - Mobile: package panel is a bottom sheet with its own scroll
 - Explorer: force graph for Depends on / Used by
 - App shell and state: `App.jsx`, `AppShell.jsx`, `appStore.js`
 - Explorer data: `useGraphData.js` → API → `GraphCanvas.jsx`

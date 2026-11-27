@@ -213,13 +213,15 @@
   opacity: 1;
 }
 
-@media (max-width: 720px) {
+/* Match useMediaQuery (769) so sheet class + layout agree. */
+@media (max-width: 768px) {
   .galaxy-root {
     flex-direction: column;
   }
 
   .galaxy-stage {
     flex: 1 1 auto;
+    min-height: 0;
     padding-bottom: 0.35rem;
   }
 
@@ -228,19 +230,42 @@
     right: 0.4rem;
   }
 
+  /*
+   * Bottom sheet: give the aside a real height so the card can scroll.
+   * flex:0 0 auto + max-height alone let flex:1 card collapse to ~0.
+   */
   .galaxy-side,
   .galaxy-side--sheet {
     flex: 0 0 auto;
     width: 100%;
     max-width: none;
-    /* leave strip for shell footer over the sheet */
-    max-height: min(36vh, 17.5rem);
+    height: min(42vh, 22rem);
+    max-height: min(42vh, 22rem);
+    min-height: 11rem;
     padding-bottom: 1.35rem;
     border-left: 0;
     border-top: 1px solid rgba(255, 255, 255, 0.14);
+    overflow: hidden;
+  }
+
+  .galaxy-side-card {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: 0.75rem 0.85rem 0.45rem;
+  }
+
+  .galaxy-side .explorer-card,
+  .galaxy-side .explorer-card--sheet {
+    max-height: none;
+    overflow: visible;
   }
 
   .galaxy-side-legend {
+    flex: 0 0 auto;
     font-size: 0.75rem;
     padding: 0.5rem 0.75rem 0.65rem;
   }

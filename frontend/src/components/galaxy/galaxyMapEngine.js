@@ -29,6 +29,118 @@ export function camScaleX(cam) {
   return cam.scale * GALAXY_X_STRETCH;
 }
 
+/**
+ * Wheel zoom limits and feel (smooth lerp lives in GalaxyView).
+ * Absolute floor is only a numerical guard - the real zoom-out floor is
+ * tied to overview/fit scale so Full view is always reachable.
+ */
+/** Numerical guard only - real overview fit can be ~0.002 on large layouts. */
+export const ZOOM_FLOOR = 1e-4;
+export const ZOOM_MIN = 0.15; // legacy; do not use as overview-relative floor/ceiling
+export const ZOOM_MAX = 12; // absolute ceiling; prefer zoomMaxForOverview
+/** How far past Full view the user may zoom out (0.85 ≈ slight padding). */
+export const ZOOM_OUT_OF_FIT = 0.85;
+/**
+ * Soft zoom-in cap vs overview fit. Pin uses ~22× overview; leave headroom
+ * without allowing thousand-× empty void.
+ */
+export const ZOOM_IN_OF_FIT = 48;
+/** Stronger than 0.001 - overview scales are tiny so soft gain felt syrupy. */
+export const ZOOM_WHEEL_GAIN = 0.0018;
+/** Cap one wheel event so a single notch cannot leap the whole range. */
+export const ZOOM_WHEEL_DY_CAP = 220;
+/** Per-frame blend toward target - high so scroll keeps up with the hand. */
+export const ZOOM_LERP = 0.78;
+export const ZOOM_SNAP_EPS = 0.002;
+
+/** Normalize wheel deltaY across pixel / line / page modes. */
+export function normalizeWheelDeltaY(deltaY, deltaMode, pageHeight = 800) {
+  const dy = Number(deltaY) || 0;
+  let out = dy;
+  if (deltaMode === 1) out = dy * 16;
+  else if (deltaMode === 2) out = dy * Math.max(1, pageHeight);
+  if (out > ZOOM_WHEEL_DY_CAP) return ZOOM_WHEEL_DY_CAP;
+  if (out < -ZOOM_WHEEL_DY_CAP) return -ZOOM_WHEEL_DY_CAP;
+  return out;
+}
+
+/** Zoom-out floor from the fitted overview scale (at or slightly below fit). */
+export function zoomMinForOverview(overviewScale) {
+  const ov =
+    Number.isFinite(overviewScale) && overviewScale > 0
+      ? overviewScale
+      : ZOOM_FLOOR;
+  // Must stay <= overview so wheel can reach Full view / arm zoom-home.
+  return Math.max(ZOOM_FLOOR, ov * ZOOM_OUT_OF_FIT);
+}
+
+/** Zoom-in ceiling from the fitted overview scale. */
+export function zoomMaxForOverview(overviewScale) {
+  const ov =
+    Number.isFinite(overviewScale) && overviewScale > 0
+      ? overviewScale
+      : ZOOM_FLOOR;
+  const capped = ov * ZOOM_IN_OF_FIT;
+  return Math.min(ZOOM_MAX, Math.max(capped, ov * 2));
+}
+
+export function clampZoomScale(scale, minScale = ZOOM_MIN, maxScale = ZOOM_MAX) {
+  const lo = Number.isFinite(minScale) ? minScale : ZOOM_MIN;
+  const hi = Number.isFinite(maxScale) ? maxScale : ZOOM_MAX;
+  return Math.min(hi, Math.max(lo, scale));
+}
+
+/** Next target scale after one wheel event (does not mutate cam). */
+export function scaleAfterWheel(
+  scale,
+  deltaY,
+  deltaMode = 0,
+  pageHeight = 800,
+  gain = ZOOM_WHEEL_GAIN,
+  minScale = ZOOM_MIN,
+  maxScale = ZOOM_MAX,
+) {
+  const dy = normalizeWheelDeltaY(deltaY, deltaMode, pageHeight);
+  return clampZoomScale(scale * Math.exp(-dy * gain), minScale, maxScale);
+}
+
+export function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+export function zoomAlmostDone(scale, target, eps = ZOOM_SNAP_EPS) {
+  return Math.abs(scale - target) <= eps;
+}
+
+/**
+ * Change cam.scale while keeping the world point under screen (sx, sy) fixed.
+ * Mutates cam in place.
+ */
+export function adjustCamForScale(
+  cam,
+  newScale,
+  sx,
+  sy,
+  canvasW,
+  canvasH,
+  minScale = ZOOM_FLOOR,
+  maxScale = ZOOM_MAX,
+) {
+  const scale = clampZoomScale(newScale, minScale, maxScale);
+  if (!cam || !(canvasW > 0) || !(canvasH > 0)) {
+    if (cam) cam.scale = scale;
+    return cam;
+  }
+  const beforeX = (sx - canvasW / 2) / camScaleX(cam) + cam.x;
+  const beforeY = (sy - canvasH / 2) / cam.scale + cam.y;
+  cam.scale = scale;
+  const afterX = (sx - canvasW / 2) / camScaleX(cam) + cam.x;
+  const afterY = (sy - canvasH / 2) / cam.scale + cam.y;
+  cam.x += beforeX - afterX;
+  cam.y += beforeY - afterY;
+  return cam;
+}
+
 export function applyNeighborsDict(neighbors) {
   const dependsOn = new Map();
   const usedBy = new Map();
@@ -268,29 +380,62 @@ export function resolveSearchHit(searchById, rawId) {
   return null;
 }
 
+/**
+ * Google Maps-style LOD: far out = major hubs only; zoom in = more dust.
+ * Labels use dependent_count as "importance".
+ */
 function hubLabelThreshold(zoomRatio) {
-  if (zoomRatio < 2.0) return Infinity;
-  if (zoomRatio < 3.2) return 80;
-  if (zoomRatio < 5.0) return 20;
-  if (zoomRatio < 7.5) return 8;
+  if (zoomRatio < 1.6) return Infinity;
+  if (zoomRatio < 2.5) return 120;
+  if (zoomRatio < 4.0) return 40;
+  if (zoomRatio < 7.0) return 12;
   return 3;
 }
 
-function keepAmbientDot(n, zoomRatio, nodeCount) {
-  if (n.is_pin_neighbor || n.is_orbit || n.is_seed) return true;
-  if (nodeCount < 25000) return true;
-  if (zoomRatio >= 1.8) return true;
-  const deg = n.dependent_count || 0;
-  if (deg >= 25) return true;
+/** Stable 0..mask sample from package id (deterministic scatter). */
+function idHashMask(id, mask) {
   let h = 0;
-  const id = n.id || "";
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
-  if (zoomRatio < 1.0) {
-    if (deg >= 8) return true;
-    return (h & 7) === 0;
+  const s = id || "";
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return (h & mask) === 0;
+}
+
+/**
+ * Whether an ambient (non-pin) node should draw at this zoom.
+ * Always LOD - the old `nodeCount < 25000` bypass kept all 20k overview
+ * dots on screen and made pan/zoom feel heavy.
+ */
+export function keepAmbientDot(n, zoomRatio) {
+  if (!n) return false;
+  if (n.is_pin_neighbor || n.is_orbit || n.is_seed) return true;
+  const deg = n.dependent_count || 0;
+  const z = Number.isFinite(zoomRatio) ? zoomRatio : 1;
+
+  // Street level - show everything in the frustum.
+  if (z >= 3.2) return true;
+  // City - drop only the tiniest dust.
+  if (z >= 2.0) {
+    if (deg >= 4) return true;
+    return idHashMask(n.id, 1); // ~50% of deg < 4
   }
-  if (deg >= 3) return true;
-  return (h & 3) === 0;
+  // Metro / tile threshold - hubs + light sample.
+  if (z >= 1.35) {
+    if (deg >= 12) return true;
+    if (deg >= 3) return idHashMask(n.id, 1);
+    return idHashMask(n.id, 7); // ~12.5%
+  }
+  // Region - strong hubs dominate.
+  if (z >= 1.0) {
+    if (deg >= 40) return true;
+    if (deg >= 10) return idHashMask(n.id, 1);
+    if (deg >= 3) return idHashMask(n.id, 7);
+    return idHashMask(n.id, 31); // ~3%
+  }
+  // World / Full view - constellation of major packages only.
+  if (deg >= 80) return true;
+  if (deg >= 25) return idHashMask(n.id, 1);
+  if (deg >= 8) return idHashMask(n.id, 7);
+  return idHashMask(n.id, 63); // ~1.5% of the long tail
 }
 
 function drawArrow(ctx, x1, y1, r1, x2, y2, r2, color, dashed = false) {
@@ -457,7 +602,7 @@ export function drawGalaxy(opts) {
       if (focus) {
         // Pin mode: clear near-pin ambient for orbit edges; keep only far hubs.
         if (!keepPinnedAmbient(n, focus)) continue;
-      } else if (!keepAmbientDot(n, zoomRatio, nodes.length)) {
+      } else if (!keepAmbientDot(n, zoomRatio)) {
         continue;
       }
     }
@@ -572,11 +717,12 @@ function ensureIndexes(nodes, index) {
 }
 
 export function hitTest(opts) {
-  const { canvas, cam, nodes, index, sx, sy } = opts;
+  const { canvas, cam, nodes, index, sx, sy, overviewScale = 1 } = opts;
   ensureIndexes(nodes, index);
   const w = canvas.clientWidth;
   const h = canvas.clientHeight;
   const sxScale = camScaleX(cam);
+  const zoomRatio = cam.scale / Math.max(overviewScale || cam.scale, 1e-6);
   const wx = (sx - w / 2) / sxScale + cam.x;
   const wy = (sy - h / 2) / cam.scale + cam.y;
   const padW = (HIT_PAD_PX + 5) / sxScale;
@@ -592,6 +738,8 @@ export function hitTest(opts) {
       const bucket = index.spatial?.get(cx + "," + cy);
       if (!bucket) continue;
       for (const n of bucket) {
+        // Same LOD as draw - do not hover invisible dust.
+        if (!keepAmbientDot(n, zoomRatio)) continue;
         const px = (n.x - cam.x) * sxScale + w / 2;
         const py = (n.y - cam.y) * cam.scale + h / 2;
         const r = Math.max(screenRadius(n) + 4, HIT_PAD_PX);

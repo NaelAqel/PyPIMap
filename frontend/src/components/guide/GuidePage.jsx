@@ -81,7 +81,8 @@ function GuidePage({ embedded = false }) {
             you click or search. Search or click pins a package and opens its
             info panel (Depends on / Used by / metadata) on the same map. Use{" "}
             <em>Full view</em> after zooming to reset the camera to the whole
-            map.
+            map. First open shows a short tour near the controls (you can skip
+            it anytime).
           </p>
         </section>
 

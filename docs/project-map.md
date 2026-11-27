@@ -227,7 +227,7 @@ $$
 | Galaxy layout / tiles | `galaxy_layout.py`, `build_galaxy_from_pg.py`, `build_map_tiles.py` |
 | Galaxy UI | Galaxy files under `frontend/src/` |
 | Explorer graph | `useGraphData.js`, `GraphCanvas.jsx` |
-| MCP tools | `mcp/src/pypimap_mcp/server.py` |
+| MCP tools / connect docs | `mcp/`, `/mcp` page, `backend/seo/llms.txt` |
 | Deploy | `docker-compose.yml`, `Caddyfile`, `CONTRIBUTING.md` |
 
 ## Ripwire

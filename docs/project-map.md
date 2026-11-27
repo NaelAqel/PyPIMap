@@ -181,12 +181,6 @@ Main file: `backend/main.py`.
 | MCP tools | `mcp/src/pypimap_mcp/server.py` |
 | Deploy | `docker-compose.yml`, `Caddyfile`, `CONTRIBUTING.md` |
 
-## What is next
-
-**Release 3** (2026-11-26) is live: Galaxy, SEO shells, hosted MCP on `main`.
-
-**Release 4** is cleanup (IndexNow/`seo_cache` gone in code, ETL log markers, docs, MCP copy, brand assets).
-
 ## Ripwire
 
 ```bash

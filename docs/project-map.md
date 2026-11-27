@@ -127,21 +127,9 @@ The spelling `indecies` is old and kept on purpose. Rename only with a careful m
 ### Galaxy after ETL
 
 1. `run_galaxy_post_etl.py` calls `build_galaxy_from_pg.py`
-2. Positions come from `galaxy_layout.py` (see next section)
+2. Positions come from `galaxy_layout.py` (see **Galaxy node placement** below)
 3. `build_map_tiles.py` writes tiles under `pipeline/artifacts/galaxy/`
 4. The graph file stores **nodes only**. Pin edges come from the live `/graph` API (not a big `neighbors.json` file)
-
-## Galaxy node placement
-
-Code: `pipeline/scripts/galaxy_layout.py`.
-
-Idea: group packages around important hubs, then place them on a soft oval shape.
-
-1. Pick the top Used-by packages as hubs (with a max count).
-2. Assign every package to a hub with BFS on core dependency links (both directions).
-3. Place hubs with a sunflower pattern. Place members near their hub the same way.
-4. Lightly push overlapping points apart inside a cluster (skip heavy full pairwise work on huge graphs).
-5. Stretch the X axis (`oval_aspect`), then center the map.
 
 ## Backend
 
@@ -156,9 +144,76 @@ Main file: `backend/main.py`.
 ## Frontend
 
 - Default screen: Galaxy
+- Galaxy map: canvas overview + tiles (`GalaxyView.jsx`, `galaxyMapEngine.js`)
+  - Wheel zoom is overview-relative (smooth lerp; zoom-out eases back to Full view)
+  - Far zoom uses LOD (fewer ambient dots); closer zoom shows more detail
+  - First visit: short spotlight tour (`GalaxyTour.jsx`, localStorage dismiss)
+  - Mobile: package panel is a bottom sheet; landscape uses a slim side column
+- Guide (`/guide`) is the crawlable how-to page; the tour is SPA-only and not part of SEO HTML shells
 - Explorer: force graph for Depends on / Used by
 - App shell and state: `App.jsx`, `AppShell.jsx`, `appStore.js`
 - Explorer data: `useGraphData.js` → API → `GraphCanvas.jsx`
+
+## Galaxy node placement
+
+Code: `pipeline/scripts/galaxy_layout.py`.
+
+Idea: group packages around important hubs, then place them on a soft oval shape.
+
+```mermaid
+flowchart LR
+  Hubs[Pick top Used-by hubs] --> BFS[BFS clusters on core edges]
+  BFS --> Place[Sunflower place hubs and members]
+  Place --> Collide[Light within-cluster collision]
+  Collide --> Oval[Stretch X oval_aspect and center]
+  Oval --> Tiles[build_map_tiles.py artifacts]
+```
+
+1. **Hubs.** Cap count from graph size $N$ (defaults: floor 8, cap 96):
+
+$$
+n_{\mathrm{hub}} = \mathrm{clamp}\!\left(8,\; \lfloor 2.5\sqrt{N}\rfloor + 8,\; 96\right)
+$$
+
+Take the top $n_{\mathrm{hub}}$ packages by Used-by count.
+
+2. **Clusters.** Multi-source BFS from hubs on undirected **core** dependency edges. Each package gets one owner hub (orphans become their own hub).
+
+3. **Sunflower place** (Vogel spiral). Slot $i \ge 0$, scale $c$, small angle jitter $\varepsilon$:
+
+$$
+\phi = \pi(3 - \sqrt{5}),\qquad
+r_i = c\sqrt{i+1},\qquad
+\theta_i = i\,\phi + \varepsilon
+$$
+
+$$
+(x_i, y_i) = (r_i\cos\theta_i,\; r_i\sin\theta_i)
+$$
+
+Hubs use $c_{\mathrm{hub}} = 90$. Members sit in a local sunflower around their hub with
+
+$$
+c_{\mathrm{local}} = 14 + 3.5\,\ln(1 + |cluster|)
+$$
+
+so $(x,y) = (x_{\mathrm{hub}}, y_{\mathrm{hub}}) + (x_{\mathrm{local}}, y_{\mathrm{local}})$.
+
+4. **Collision** (only if $N$ is not huge). Pairwise inside each cluster; collision radius grows with Used-by:
+
+$$
+R(v) = 5 + 2.2\,\ln(1 + d_v)
+$$
+
+If distance $< R(u)+R(v)$, push apart with force $\propto$ overlap, capped by a cooling temperature ($T \leftarrow 0.94\,T$ each round).
+
+5. **Oval + center.** Subtract centroid $(c_x, c_y)$, then stretch X (`oval_aspect` default $1.35$):
+
+$$
+(x', y') = \big((x - c_x)\,a,\;\; y - c_y\big),\qquad a = \max(a_{\mathrm{oval}},\, 0.5)
+$$
+
+6. **Tiles.** `build_map_tiles.py` writes the tile set under `pipeline/artifacts/galaxy/`.
 
 ## Where to start
 
@@ -172,14 +227,8 @@ Main file: `backend/main.py`.
 | Galaxy layout / tiles | `galaxy_layout.py`, `build_galaxy_from_pg.py`, `build_map_tiles.py` |
 | Galaxy UI | Galaxy files under `frontend/src/` |
 | Explorer graph | `useGraphData.js`, `GraphCanvas.jsx` |
-| MCP tools | `mcp/src/pypimap_mcp/server.py` |
+| MCP tools / connect docs | `mcp/`, `/mcp` page, `backend/seo/llms.txt` |
 | Deploy | `docker-compose.yml`, `Caddyfile`, `CONTRIBUTING.md` |
-
-## What is next
-
-**Release 3** (2026-11-26) is live: Galaxy, SEO shells, hosted MCP on `main`.
-
-**Release 4** is cleanup (IndexNow/`seo_cache` gone in code, ETL log markers, docs, MCP copy, brand assets).
 
 ## Ripwire
 

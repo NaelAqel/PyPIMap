@@ -24,9 +24,21 @@ MCP_PATH = "/mcp"
 
 INSTRUCTIONS = (
     "Read-only PyPIMap tools for the Python package dependency ecosystem. "
-    "Glossary: Depends on / Used by, optional, active_version. "
+    "Glossary: Depends on = packages this one needs (also: dependencies, "
+    "requires, needs, imports). Used by = packages that need this one "
+    "(also: dependents, reverse deps, who uses). Core/optional = required vs "
+    "extras. active_version = PEP 440 active release (prefer final). "
     "importance_score = used_by_core_counts + 0.3 * used_by_optional_counts. "
-    "Interactive lookup only; respect rate limits. " + dataset_blurb()
+    "parent/child is ambiguous - prefer Depends on / Used by. "
+    "After package_info, answer in a short card: name, active_version, author, "
+    "Depends on counts, Used by counts, importance_score with meaning "
+    "(used_by_core + 0.3 * used_by_optional; higher = more packages depend "
+    "on this one), home_page, PyPIMap pin link (https://pypimap.com/), API "
+    "https://api.pypimap.com/package/api/{name}. "
+    "If they asked needs/dependencies, add a short Depends on list from "
+    "package_depends_on. If who uses/reverse deps, add Used by from "
+    "package_used_by. Interactive lookup only; respect rate limits. "
+    + dataset_blurb()
 )
 
 # Behind Caddy/Cloudflare the public Host is mcp.pypimap.com. FastMCP's
@@ -99,6 +111,7 @@ def package_depends_on(
 ) -> str:
     """Depends on - packages this one needs (GET /graph/{name}/depends-on).
 
+    Use for: dependencies, requires, needs, imports, what does X depend on.
     depth 1-4; node_cap 10-500; show_optional includes optional edges when true.
     """
     depth = max(1, min(depth, 4))
@@ -125,6 +138,7 @@ def package_used_by(
 ) -> str:
     """Used by - packages that need this one (GET /graph/{name}/used-by).
 
+    Use for: dependents, reverse dependencies, who uses X, who depends on X.
     depth 1-4; node_cap 10-500; show_optional includes optional edges when true.
     """
     depth = max(1, min(depth, 4))

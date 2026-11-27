@@ -20,8 +20,16 @@ import {
   PIN_EDGE_CAP,
   MAX_TILE_INFLIGHT,
   MAX_VISIBLE_TILES,
+  scaleAfterWheel,
+  adjustCamForScale,
+  lerp,
+  zoomAlmostDone,
+  zoomMinForOverview,
+  zoomMaxForOverview,
+  ZOOM_LERP,
 } from "../galaxy/galaxyMapEngine";
 import GalaxyPinPanel from "../galaxy/GalaxyPinPanel";
+import GalaxyTour from "../galaxy/GalaxyTour";
 
 /** Parse live /graph one-hop nodes into galaxy edge lists (no 74MB neighbors.json). */
 function neighborsFromGraphResult(result, direction) {
@@ -63,6 +71,15 @@ function GalaxyView({ active = true }) {
     nodes: [],
     cam: { x: 0, y: 0, scale: 1 },
     overviewScale: 1,
+    /** Smooth wheel zoom: lerp cam.scale toward this each frame. */
+    zoomTargetScale: 1,
+    zoomAnchor: null,
+    /** When set, wheel zoom-out eases cam x/y/scale to Full view framing. */
+    zoomHome: false,
+    zoomHomeTarget: null,
+    zoomRaf: 0,
+    /** Coalesce pan redraws to one/frame. */
+    panRaf: 0,
     selectedId: null,
     hover: null,
     dragging: false,
@@ -86,7 +103,6 @@ function GalaxyView({ active = true }) {
   const scheduleTilesRef = useRef(null);
 
   const galaxyPinId = useAppStore((s) => s.galaxyPinId);
-  const galaxyPinName = useAppStore((s) => s.galaxyPinName);
   const showOptional = useAppStore((s) => s.showOptional);
   const setGalaxyCameraFn = useAppStore((s) => s.setGalaxyCamera);
   const clearGalaxyPin = useAppStore((s) => s.clearGalaxyPin);
@@ -224,11 +240,8 @@ function GalaxyView({ active = true }) {
     if (!canvas) return;
     const ratio =
       s.overviewScale > 0 ? s.cam.scale / s.overviewScale : 1;
-    if (ratio < (s.meta.tile_zoom_ratio || 1.4)) {
-      rebuildVisibleNodes();
-      redraw();
-      return;
-    }
+    // Far out: overview only - skip rebuild/redraw here (caller already drew).
+    if (ratio < (s.meta.tile_zoom_ratio || 1.4)) return;
     clearTimeout(s.tileTimer);
     s.tileTimer = setTimeout(() => {
       const keys = visibleTileKeys(
@@ -259,7 +272,15 @@ function GalaxyView({ active = true }) {
       canvas.clientHeight,
     );
     if (!fitted) return;
+    if (s.zoomRaf) {
+      cancelAnimationFrame(s.zoomRaf);
+      s.zoomRaf = 0;
+    }
     s.cam = { x: fitted.x, y: fitted.y, scale: fitted.scale };
+    s.zoomTargetScale = fitted.scale;
+    s.zoomAnchor = null;
+    s.zoomHome = false;
+    s.zoomHomeTarget = null;
     s.overviewScale = fitted.scale;
     persistCamera();
     resizeCanvas();
@@ -449,6 +470,8 @@ function GalaxyView({ active = true }) {
           saved.scale > 0
         ) {
           s.cam = { x: saved.x, y: saved.y, scale: saved.scale };
+          s.zoomTargetScale = saved.scale;
+          s.zoomAnchor = null;
           s.overviewScale =
             Number.isFinite(saved.overviewScale) && saved.overviewScale > 0
               ? saved.overviewScale
@@ -531,6 +554,8 @@ function GalaxyView({ active = true }) {
         s.bootOk
       ) {
         s.cam = { x: saved.x, y: saved.y, scale: saved.scale };
+        s.zoomTargetScale = saved.scale;
+        s.zoomAnchor = null;
         if (Number.isFinite(saved.overviewScale) && saved.overviewScale > 0) {
           s.overviewScale = saved.overviewScale;
         }
@@ -548,21 +573,58 @@ function GalaxyView({ active = true }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const worldFromEvent = (e) => {
+    /**
+     * Wheel zoom lerps toward zoomTargetScale. If the user pans mid-lerp,
+     * aborting at cam.scale throws away the rest of the scroll (feels slow).
+     * Commit the pending target under the last anchor, then pan.
+     */
+    const commitPendingZoom = () => {
       const s = stateRef.current;
-      const rect = canvas.getBoundingClientRect();
-      const sx = e.clientX - rect.left;
-      const sy = e.clientY - rect.top;
-      return {
-        x: (sx - canvas.clientWidth / 2) / camScaleX(s.cam) + s.cam.x,
-        y: (sy - canvas.clientHeight / 2) / s.cam.scale + s.cam.y,
-        sx,
-        sy,
-      };
+      stopZoomLoop();
+      if (s.zoomHome && s.zoomHomeTarget) {
+        const t = s.zoomHomeTarget;
+        s.cam = { x: t.x, y: t.y, scale: t.scale };
+        s.zoomTargetScale = t.scale;
+        s.overviewScale = t.scale;
+        s.zoomHome = false;
+        s.zoomHomeTarget = null;
+        s.zoomAnchor = null;
+        redraw();
+        return;
+      }
+      const target = s.zoomTargetScale;
+      const anchor = s.zoomAnchor;
+      if (
+        Number.isFinite(target) &&
+        !zoomAlmostDone(s.cam.scale, target)
+      ) {
+        const zMin = zoomMinForOverview(s.overviewScale);
+        const zMax = zoomMaxForOverview(s.overviewScale);
+        if (anchor && canvas.clientWidth > 0) {
+          adjustCamForScale(
+            s.cam,
+            target,
+            anchor.sx,
+            anchor.sy,
+            canvas.clientWidth,
+            canvas.clientHeight,
+            zMin,
+            zMax,
+          );
+        } else {
+          s.cam.scale = target;
+        }
+        redraw();
+      }
+      s.zoomTargetScale = s.cam.scale;
+      s.zoomAnchor = null;
     };
 
     const onDown = (e) => {
       const s = stateRef.current;
+      // Zoom with wheel (no click) then drag - finish zoom first so pan
+      // does not fight the lerp or drop the scrolled target.
+      commitPendingZoom();
       s.dragging = true;
       s.moved = false;
       s.lastPtr = { x: e.clientX, y: e.clientY };
@@ -571,8 +633,22 @@ function GalaxyView({ active = true }) {
     };
 
     const onUp = () => {
-      stateRef.current.dragging = false;
+      const s = stateRef.current;
+      const didMove = s.moved;
+      s.dragging = false;
       canvas.classList.remove("dragging");
+      if (s.panRaf) {
+        cancelAnimationFrame(s.panRaf);
+        s.panRaf = 0;
+        redraw();
+      }
+      // Persist / tiles once per drag - doing this every move re-rendered
+      // the store and rebuilt 20k nodes, which made pan feel syrupy.
+      if (didMove) {
+        s.zoomTargetScale = s.cam.scale;
+        persistCamera();
+        scheduleTiles();
+      }
     };
 
     const onMove = (e) => {
@@ -584,10 +660,11 @@ function GalaxyView({ active = true }) {
         s.cam.x -= dx / camScaleX(s.cam);
         s.cam.y -= dy / s.cam.scale;
         s.lastPtr = { x: e.clientX, y: e.clientY };
-        redraw();
-        if (s.moved) {
-          persistCamera();
-          scheduleTiles();
+        if (!s.panRaf) {
+          s.panRaf = requestAnimationFrame(() => {
+            s.panRaf = 0;
+            redraw();
+          });
         }
         return;
       }
@@ -597,6 +674,7 @@ function GalaxyView({ active = true }) {
         cam: s.cam,
         nodes: s.nodes,
         index: s.index,
+        overviewScale: s.overviewScale,
         sx: e.clientX - rect.left,
         sy: e.clientY - rect.top,
       });
@@ -621,6 +699,7 @@ function GalaxyView({ active = true }) {
         cam: s.cam,
         nodes: s.nodes,
         index: s.index,
+        overviewScale: s.overviewScale,
         sx: e.clientX - rect.left,
         sy: e.clientY - rect.top,
       });
@@ -640,20 +719,147 @@ function GalaxyView({ active = true }) {
       pinOnGalaxy(n.id, n.name);
     };
 
+    const stopZoomLoop = () => {
+      const s = stateRef.current;
+      if (s.zoomRaf) {
+        cancelAnimationFrame(s.zoomRaf);
+        s.zoomRaf = 0;
+      }
+    };
+
+    const homeAlmostDone = (cam, target) => {
+      if (!target || !zoomAlmostDone(cam.scale, target.scale)) return false;
+      const errPx =
+        Math.hypot(cam.x - target.x, cam.y - target.y) * cam.scale;
+      return errPx <= 1.25;
+    };
+
+    const tickZoom = () => {
+      const s = stateRef.current;
+      s.zoomRaf = 0;
+
+      // Ease back to Full view (scale + center) - cursor anchor would leave
+      // you at overview scale looking at a corner of the map.
+      if (s.zoomHome && s.zoomHomeTarget) {
+        const t = s.zoomHomeTarget;
+        s.cam.x = lerp(s.cam.x, t.x, ZOOM_LERP);
+        s.cam.y = lerp(s.cam.y, t.y, ZOOM_LERP);
+        s.cam.scale = lerp(s.cam.scale, t.scale, ZOOM_LERP);
+        if (homeAlmostDone(s.cam, t)) {
+          s.cam = { x: t.x, y: t.y, scale: t.scale };
+          s.zoomTargetScale = t.scale;
+          s.overviewScale = t.scale;
+          s.zoomHome = false;
+          s.zoomHomeTarget = null;
+          s.zoomAnchor = null;
+          redraw();
+          persistCamera();
+          scheduleTiles();
+          return;
+        }
+        redraw();
+        s.zoomRaf = requestAnimationFrame(tickZoom);
+        return;
+      }
+
+      const target = s.zoomTargetScale;
+      const anchor = s.zoomAnchor;
+      if (!Number.isFinite(target)) return;
+      const zMin = zoomMinForOverview(s.overviewScale);
+      const zMax = zoomMaxForOverview(s.overviewScale);
+
+      let nextScale = lerp(s.cam.scale, target, ZOOM_LERP);
+      if (zoomAlmostDone(nextScale, target)) nextScale = target;
+
+      if (anchor && canvas.clientWidth > 0) {
+        adjustCamForScale(
+          s.cam,
+          nextScale,
+          anchor.sx,
+          anchor.sy,
+          canvas.clientWidth,
+          canvas.clientHeight,
+          zMin,
+          zMax,
+        );
+      } else {
+        s.cam.scale = nextScale;
+      }
+
+      redraw();
+
+      if (!zoomAlmostDone(s.cam.scale, target)) {
+        s.zoomRaf = requestAnimationFrame(tickZoom);
+        return;
+      }
+
+      // Settled - resync so the next gesture starts from the true camera.
+      s.zoomTargetScale = s.cam.scale;
+      s.zoomAnchor = null;
+      persistCamera();
+      scheduleTiles();
+    };
+
     const onWheel = (e) => {
       e.preventDefault();
       const s = stateRef.current;
-      const before = worldFromEvent(e);
-      s.cam.scale = Math.min(
-        12,
-        Math.max(0.15, s.cam.scale * Math.exp(-e.deltaY * 0.0011)),
+      const rect = canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+      const zoomingOut = e.deltaY > 0;
+
+      // Zoom-in cancels a pending Full-view ease.
+      if (!zoomingOut) {
+        s.zoomHome = false;
+        s.zoomHomeTarget = null;
+      } else if (s.zoomHome) {
+        // Keep easing home - further zoom-out notches used to clear zoomHome
+        // because next was computed from the still-high cam.scale.
+        if (!s.zoomRaf) s.zoomRaf = requestAnimationFrame(tickZoom);
+        return;
+      }
+
+      // Mid-gesture: chain from target. Idle: start from live camera.
+      const base = s.zoomRaf ? s.zoomTargetScale : s.cam.scale;
+      const zMin = zoomMinForOverview(s.overviewScale);
+      const zMax = zoomMaxForOverview(s.overviewScale);
+      const next = scaleAfterWheel(
+        base,
+        e.deltaY,
+        e.deltaMode,
+        canvas.clientHeight,
+        undefined,
+        zMin,
+        zMax,
       );
-      const after = worldFromEvent(e);
-      s.cam.x += before.x - after.x;
-      s.cam.y += before.y - after.y;
-      redraw();
-      persistCamera();
-      scheduleTiles();
+
+      // Zooming out to (or past) overview scale → Full view framing, not
+      // cursor-anchored scale-only (that leaves the map off-center).
+      if (
+        zoomingOut &&
+        Number.isFinite(s.overviewScale) &&
+        next <= s.overviewScale * 1.05
+      ) {
+        const fitted = computeFitCamera(
+          s.overviewNodes.length ? s.overviewNodes : s.nodes,
+          canvas.clientWidth,
+          canvas.clientHeight,
+        );
+        if (fitted) {
+          s.zoomHome = true;
+          s.zoomHomeTarget = fitted;
+          s.zoomTargetScale = fitted.scale;
+          s.zoomAnchor = null;
+          if (!s.zoomRaf) s.zoomRaf = requestAnimationFrame(tickZoom);
+          return;
+        }
+      }
+
+      s.zoomHome = false;
+      s.zoomHomeTarget = null;
+      s.zoomTargetScale = next;
+      s.zoomAnchor = { sx, sy };
+      if (!s.zoomRaf) s.zoomRaf = requestAnimationFrame(tickZoom);
     };
 
     const onKey = (e) => {
@@ -671,6 +877,12 @@ function GalaxyView({ active = true }) {
     window.addEventListener("keydown", onKey);
 
     return () => {
+      stopZoomLoop();
+      const s = stateRef.current;
+      if (s.panRaf) {
+        cancelAnimationFrame(s.panRaf);
+        s.panRaf = 0;
+      }
       canvas.removeEventListener("pointerdown", onDown);
       canvas.removeEventListener("pointerup", onUp);
       canvas.removeEventListener("pointermove", onMove);
@@ -733,6 +945,9 @@ function GalaxyView({ active = true }) {
           className="galaxy-canvas"
           aria-label="PyPI package Galaxy map"
         />
+
+        {/* First visit only - waits until load HUD clears */}
+        {active && !status && !error && <GalaxyTour active={active} />}
       </div>
       {active && <GalaxyPinPanel />}
     </div>

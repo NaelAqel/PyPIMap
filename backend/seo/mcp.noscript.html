@@ -1,13 +1,19 @@
 <h1>PyPIMap MCP</h1>
-<p>Read-only Model Context Protocol tools over the public PyPIMap API.
-Interactive package lookup for agents - not a bulk catalog dump.</p>
-<p>Hosted MCP: https://mcp.pypimap.com/mcp (streamable HTTP).
-Docs: <a href="/mcp">pypimap.com/mcp</a>.</p>
+<p>MCP is a plug so an AI app can call PyPIMap tools (search, Depends on,
+Used by) over the public API. Interactive lookup - not a bulk catalog dump.</p>
+<p><strong>Start here - pick A or B</strong></p>
+<p>A. Hosted URL (streamable HTTP): https://mcp.pypimap.com/mcp
+- when the product has add remote MCP / server URL (e.g. some ChatGPT plans).</p>
+<p>B. Local stdio: install pypimap-mcp from mcp/ on GitHub
+- Cursor, Claude Desktop (Claude often rejects the hosted URL).</p>
+<p>No MCP in the product -> public JSON API at api.pypimap.com/docs.
+That is the client limit, not MCP down.</p>
+<p>Glossary: Depends on = packages this one needs (dependencies, requires).
+Used by = packages that need this one (dependents, who uses).
+Core/optional, active_version, importance_score =
+used_by_core_counts + 0.3 * used_by_optional_counts.
+parent/child is ambiguous - prefer Depends on / Used by.</p>
 <p>Tools: search_packages, package_info, package_depends_on,
-package_used_by, last_update. Glossary: Depends on / Used by,
-optional, active_version. importance_score = used_by_core_counts
-+ 0.3 * used_by_optional_counts.</p>
-<p>ChatGPT / remote MCP: use https://mcp.pypimap.com/mcp (streamable HTTP).
-Cursor / Claude Desktop: stdio - see mcp/ in the GitHub repo.</p>
+package_used_by, last_update. Docs: <a href="/mcp">pypimap.com/mcp</a>.</p>
 <p>Rate limits (HTTP): 60/min and 2000/day per IP. Bulk offline:
 Kaggle DOI 10.34740/kaggle/ds/10945692.</p>

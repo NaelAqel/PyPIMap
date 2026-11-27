@@ -82,19 +82,20 @@ The default Docker setup serves a **production build** of the frontend - code ch
 
 For local development with hot-reload:
 
-1. **Start the supporting services (everything except frontend):**
+1. **Galaxy tiles:** backend mounts `pipeline/artifacts/galaxy`. That path must be a real directory (not a broken symlink), with at least `tiles/meta.json` and `tiles/overview.json` (copy from prod or rebuild). Without them, Galaxy shows a load error.
+2. **Start the supporting services (everything except frontend):**
 ```bash
   docker compose up -d frontend
   docker compose up -d postgres_db backend caddy
   docker compose stop frontend
 ```
-2. **Run the frontend locally:**
+3. **Run the frontend locally:**
 ```bash
   cd frontend
   npm install
   npm run dev -- --host
 ```
-3. Open the local URL Vite prints in the terminal (typically `http://localhost:3000`).
+4. Open the local URL Vite prints in the terminal (typically `http://localhost:3000`).
 
 > Note: Caddy routes `frontend:3000` internally, so accessing the site through `pypimap.com`/Caddy won't reflect your local changes while the `frontend` container is stopped. Use the Vite dev URL directly instead.
 

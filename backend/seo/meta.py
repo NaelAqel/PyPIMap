@@ -19,8 +19,9 @@ GUIDE_DESCRIPTION = (
 )
 MCP_TITLE = "MCP | PyPIMap - agent tools over the public API"
 MCP_DESCRIPTION = (
-    "Connect agents to PyPIMap via MCP - search packages, Depends on / Used by "
-    "graphs, and freshness over the public API. Hosted at mcp.pypimap.com/mcp."
+    "Connect agents to PyPIMap via MCP - pick hosted URL "
+    "(mcp.pypimap.com/mcp) or local stdio. Search packages, Depends on / Used by "
+    "graphs, and freshness over the public API."
 )
 EXPLORE_DESCRIPTION = (
     "PyPIMap Galaxy pin view. Package deep links are app URLs, not "

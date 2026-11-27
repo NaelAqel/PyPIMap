@@ -1,11 +1,14 @@
 <h1>PyPIMap Guide</h1>
 <p>PyPIMap visualizes the PyPI dependency ecosystem.
-<strong>Depends on</strong> means packages this one needs;
-<strong>Used by</strong> means packages that need this one.
+<strong>Depends on</strong> means packages this one needs
+(also: dependencies, requires);
+<strong>Used by</strong> means packages that need this one
+(also: dependents, who uses).
 Core edges are required; optional edges come from extras.
 <strong>active_version</strong> is the PEP 440 active release
 (prefer final), not last upload time.</p>
 <p>Public JSON API: /search, /package/api/{name},
 /graph/{name}/depends-on, /graph/{name}/used-by, /last_update.
-See also <a href="/mcp">/mcp</a> and llms.txt for agents.</p>
+Agents: <a href="/mcp">/mcp</a> (connect A hosted URL or B local stdio)
+and llms.txt.</p>
 <p>Bulk data: Kaggle dataset DOI 10.34740/kaggle/ds/10945692.</p>
